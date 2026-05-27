@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sudo apt-get update -qq)",
+      "Bash(sudo apt-get install -y ca-certificates curl gnupg lsb-release)",
+      "Bash(npm run *)",
+      "Bash(psql postgresql://secondbrain:secondbrain@localhost:5432/secondbrain -c \"SELECT * FROM users LIMIT 5;\")",
+      "Bash(pnpm exec *)",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git add *)"
+    ]
+  }
+}
