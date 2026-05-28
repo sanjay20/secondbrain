@@ -1,3 +1,4 @@
+import { formatDistanceToNow } from "date-fns";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { streamCareerCoach, aiErrorMessage } from "@secondbrain/ai-core";
@@ -6,9 +7,10 @@ export async function POST(req: Request) {
   const user = await requireUser();
   const { message } = await req.json() as { message: string };
 
-  const [goals, skills] = await Promise.all([
+  const [goals, skills, journal] = await Promise.all([
     prisma.goal.findMany({ where: { userId: user.id, status: "active" }, take: 10 }),
     prisma.skill.findMany({ where: { userId: user.id }, take: 20 }),
+    prisma.journalEntry.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 12 }),
   ]);
 
   const encoder = new TextEncoder();
@@ -19,6 +21,11 @@ export async function POST(req: Request) {
         const generator = streamCareerCoach(message, {
           goals: goals.map((g) => ({ title: g.title, category: g.category, progress: g.progress, status: g.status })),
           skills: skills.map((s) => ({ name: s.name, level: s.level, category: s.category })),
+          journal: journal.map((j) => ({
+            content: j.content,
+            category: j.category,
+            when: formatDistanceToNow(j.createdAt, { addSuffix: true }),
+          })),
         });
 
         for await (const chunk of generator) {

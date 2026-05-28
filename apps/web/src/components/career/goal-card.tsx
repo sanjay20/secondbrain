@@ -18,6 +18,7 @@ const priorityConfig = {
 
 const categoryIcons: Record<string, string> = {
   career: "💼", skill: "🎯", project: "🚀", education: "📚", personal: "⭐",
+  technical: "💻", spiritual: "🧘", parenting: "👨‍👩‍👧", finance: "💰", health: "🌱", other: "📖",
 };
 
 interface GoalCardProps {

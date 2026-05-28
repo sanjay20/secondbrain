@@ -9,6 +9,7 @@ import {
   Briefcase,
   Wallet,
   BookOpen,
+  NotebookPen,
   Sparkles,
   Settings,
   ChevronRight,
@@ -47,7 +48,12 @@ const navItems = [
     href: "/knowledge",
     icon: BookOpen,
     color: "text-pink-400",
-    comingSoon: true,
+  },
+  {
+    label: "Journal",
+    href: "/journal",
+    icon: NotebookPen,
+    color: "text-orange-400",
   },
   {
     label: "AI Coach",

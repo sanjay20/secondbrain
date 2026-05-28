@@ -40,6 +40,7 @@ export interface Goal {
   userId: string;
   title: string;
   description?: string | null;
+  area: string;
   category: string;
   status: GoalStatus;
   progress: number;
@@ -65,12 +66,23 @@ export type GoalStatus = "active" | "completed" | "paused" | "abandoned";
 export type GoalPriority = "low" | "medium" | "high" | "critical";
 export type GoalCategory = "career" | "skill" | "project" | "education" | "personal";
 
+export type LifeArea = "career" | "knowledge";
+export type KnowledgeCategory =
+  | "technical"
+  | "spiritual"
+  | "parenting"
+  | "finance"
+  | "health"
+  | "personal"
+  | "other";
+
 // ─── Skill types ──────────────────────────────────────────────────────────────
 
 export interface Skill {
   id: string;
   userId: string;
   name: string;
+  area: string;
   category: string;
   level: number;
   description?: string | null;
@@ -87,6 +99,7 @@ export interface JournalEntry {
   userId: string;
   title?: string | null;
   content: string;
+  category: string;
   mood?: string | null;
   tags: string[];
   createdAt: Date;
@@ -94,6 +107,16 @@ export interface JournalEntry {
 }
 
 export type MoodType = "great" | "good" | "neutral" | "bad" | "terrible";
+export type JournalCategory =
+  | "work"
+  | "family"
+  | "health"
+  | "incident"
+  | "personal"
+  | "professional"
+  | "spiritual"
+  | "finance"
+  | "other";
 
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 

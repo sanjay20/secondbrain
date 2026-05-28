@@ -17,7 +17,9 @@ export type AIFeature =
   | "healthInsight"
   | "habitSuggestion"
   | "careerInsight"
-  | "careerCoach";
+  | "careerCoach"
+  | "knowledgeInsight"
+  | "journalInsight";
 
 /**
  * Per-feature settings. Each feature lists the model to use for every provider
@@ -37,6 +39,8 @@ const FEATURES: Record<
   habitSuggestion: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 300 },
   careerInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 400 },
   careerCoach: { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
+  knowledgeInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
+  journalInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
 };
 
 /** Resolve the provider + model + token budget for a feature. */

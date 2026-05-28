@@ -6,16 +6,18 @@ import { prisma } from "@/lib/db";
 const createSchema = z.object({
   title: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
+  area: z.string().default("career"),
   category: z.string().default("career"),
   priority: z.string().default("medium"),
   dueDate: z.string().optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await requireUser();
+  const area = new URL(req.url).searchParams.get("area");
 
   const goals = await prisma.goal.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, ...(area ? { area } : {}) },
     include: { milestones: { orderBy: { order: "asc" } } },
     orderBy: { createdAt: "desc" },
   });

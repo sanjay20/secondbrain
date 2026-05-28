@@ -7,3 +7,5 @@ export { shouldMockAI, aiErrorMessage } from "./shared";
 export { generateDailyBriefing } from "./agents/briefing-agent";
 export { getHabitInsights, suggestHabits } from "./agents/health-agent";
 export { getCareerInsights, streamCareerCoach } from "./agents/career-agent";
+export { getKnowledgeRecommendations } from "./agents/knowledge-agent";
+export { getJournalFollowups } from "./agents/journal-agent";

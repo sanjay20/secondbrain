@@ -11,6 +11,7 @@ interface CareerContext {
     status: string;
   }>;
   skills: Array<{ name: string; level: number; category: string }>;
+  journal?: Array<{ content: string; category: string; when: string }>;
 }
 
 function getMockCareerInsight(ctx: CareerContext): string {
@@ -77,11 +78,36 @@ export async function* streamCareerCoach(
 
   const goalData = ctx.goals.map((g) => `${g.title}: ${g.progress}%`).join(", ");
   const skillData = ctx.skills.map((s) => `${s.name} (L${s.level})`).join(", ");
+  const journalData = (ctx.journal ?? [])
+    .map((j) => `- [${j.when}] (${j.category}) ${j.content}`)
+    .join("\n");
 
   const system = `${SYSTEM_PROMPT_BASE}
 
 User's current goals: ${goalData || "none yet"}
-User's skills: ${skillData || "none tracked"}`;
+User's skills: ${skillData || "none tracked"}
+${journalData ? `\nRecent journal events (most recent first):\n${journalData}\n` : ""}
+${ACTION_PROTOCOL}`;
 
   yield* streamChat(getChatConfig("careerCoach"), system, userMessage);
 }
+
+const ACTION_PROTOCOL = `## Taking actions in the app
+You can add items to the user's app on their behalf: habits (Health & Habits), goals (Career or Knowledge), and skills.
+
+ONLY when the user explicitly asks you to add / save / create / track items, append a machine-readable block at the very END of your reply, after your normal prose. Use this EXACT format with valid JSON on a single line between the markers:
+
+<<<ACTIONS>>>
+{"actions":[{"type":"habit","name":"Eat 5 servings of vegetables","category":"health","frequency":"daily"}]}
+<<<END_ACTIONS>>>
+
+Field rules:
+- habit: name (required), category (one of: health, fitness, mindfulness, learning, productivity, social, general), frequency ("daily" or "weekly"), description (optional).
+- goal: title (required), area ("career" or "knowledge"), category (free text, e.g. career/skill/finance/spiritual), priority (low|medium|high|critical), description (optional).
+- skill: name (required), area ("career" or "knowledge"), category (free text), level (1-5).
+
+Important:
+- Include the block ONLY when the user clearly asks to add/save/track. For normal questions or when just suggesting ideas, do NOT include it.
+- Still write a short, friendly confirmation sentence in your prose (e.g. "Adding these 5 habits for you:"). The block is in addition to that.
+- Pick sensible categories. Diet, exercise, sleep, hydration → category "health" or "fitness".
+- Keep the JSON minimal and valid. Do not wrap it in code fences.`;

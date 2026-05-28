@@ -28,8 +28,8 @@ export default function CareerPage() {
   const fetchData = useCallback(async () => {
     try {
       const [goalsRes, skillsRes] = await Promise.all([
-        fetch("/api/goals"),
-        fetch("/api/skills"),
+        fetch("/api/goals?area=career"),
+        fetch("/api/skills?area=career"),
       ]);
       setGoals(await goalsRes.json() as Goal[]);
       setSkills(await skillsRes.json() as Skill[]);

@@ -78,6 +78,7 @@ model Goal {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   description String?
+  area        String    @default("career")
   category    String    @default("career")
   status      String    @default("active")
   progress    Int       @default(0)
@@ -112,6 +113,7 @@ model Skill {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
+  area        String   @default("career")
   category    String   @default("technical")
   level       Int      @default(1)
   description String?
@@ -129,6 +131,7 @@ model JournalEntry {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String?
   content   String
+  category  String   @default("general")
   mood      String?
   tags      String[]
   createdAt DateTime @default(now())
