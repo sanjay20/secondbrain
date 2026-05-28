@@ -8,7 +8,7 @@ vi.mock("@/lib/push", () => ({ sendPushNotification: vi.fn().mockResolvedValue(u
 import { sendReminderEmail } from "@/lib/email";
 import { sendPushNotification } from "@/lib/push";
 
-const mockPrisma = prisma as {
+const mockPrisma = prisma as unknown as {
   reminder: {
     findMany: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;

@@ -5,8 +5,9 @@ import { sendPushNotification } from "@/lib/push";
 import type { PushSubscription } from "web-push";
 
 export async function POST(req: Request) {
+  const configuredSecret = process.env.REMINDER_PROCESS_SECRET;
   const secret = req.headers.get("x-reminder-secret");
-  if (!secret || secret !== process.env.REMINDER_PROCESS_SECRET) {
+  if (!configuredSecret || !secret || secret !== configuredSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

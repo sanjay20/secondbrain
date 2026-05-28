@@ -3,7 +3,7 @@ import { POST } from "@/app/api/reminders/route";
 import { DELETE } from "@/app/api/reminders/[id]/route";
 import { prisma } from "@/lib/db";
 
-const mockPrisma = prisma as {
+const mockPrisma = prisma as unknown as {
   journalEntry: { findFirst: ReturnType<typeof vi.fn> };
   reminder: {
     upsert: ReturnType<typeof vi.fn>;
