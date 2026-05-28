@@ -17,6 +17,7 @@ export async function GET() {
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
     take: 100,
+    include: { reminder: true },
   });
   return NextResponse.json(entries);
 }

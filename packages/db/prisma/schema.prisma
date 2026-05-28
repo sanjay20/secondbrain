@@ -10,19 +10,21 @@ datasource db {
 // ─── CORE ────────────────────────────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique
-  email     String   @unique
-  name      String?
-  imageUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  clerkId          String   @unique
+  email            String   @unique
+  name             String?
+  imageUrl         String?
+  pushSubscription Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   habits       Habit[]
   habitLogs    HabitLog[]
   goals        Goal[]
   skills       Skill[]
   journals     JournalEntry[]
+  reminders    Reminder[]
   aiBriefings  AiBriefing[]
 
   @@map("users")
@@ -137,8 +139,27 @@ model JournalEntry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  reminder  Reminder?
+
   @@index([userId])
   @@map("journal_entries")
+}
+
+// ─── REMINDERS ───────────────────────────────────────────────────────────────
+
+model Reminder {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  journalEntryId String       @unique
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  scheduledAt    DateTime
+  status         String       @default("pending")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([userId, status, scheduledAt])
+  @@map("reminders")
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────────────

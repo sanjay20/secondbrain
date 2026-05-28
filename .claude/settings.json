@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx prisma *)",
       "Bash(curl -s -o /dev/null http://localhost:3917/)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(pnpm test *)"
     ]
   }
 }

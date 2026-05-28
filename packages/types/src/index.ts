@@ -94,6 +94,16 @@ export type SkillCategory = "technical" | "soft" | "language" | "tool" | "domain
 
 // ─── Journal types ────────────────────────────────────────────────────────────
 
+export interface Reminder {
+  id: string;
+  userId: string;
+  journalEntryId: string;
+  scheduledAt: Date;
+  status: "pending" | "sent" | "cancelled";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface JournalEntry {
   id: string;
   userId: string;
@@ -102,6 +112,7 @@ export interface JournalEntry {
   category: string;
   mood?: string | null;
   tags: string[];
+  reminder?: Reminder | null;
   createdAt: Date;
   updatedAt: Date;
 }
