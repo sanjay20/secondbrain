@@ -14,7 +14,11 @@ const schema = z.object({
 export async function POST(req: Request) {
   const user = await requireUser();
   const body = await req.json() as unknown;
-  const data = schema.parse(body);
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    return NextResponse.json({ error: result.error.issues[0]?.message }, { status: 400 });
+  }
+  const data = result.data;
 
   // Verify the journal entry belongs to this user
   const entry = await prisma.journalEntry.findFirst({
