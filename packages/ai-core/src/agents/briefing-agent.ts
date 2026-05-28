@@ -1,4 +1,5 @@
-import { anthropic, MODELS, SYSTEM_PROMPT_BASE } from "../client";
+import { anthropic, SYSTEM_PROMPT_BASE } from "../client";
+import { AI_CONFIG } from "../ai-config";
 
 interface BriefingContext {
   userName: string;
@@ -50,8 +51,8 @@ export async function generateDailyBriefing(ctx: BriefingContext): Promise<strin
       .join("\n");
 
     const message = await anthropic.messages.create({
-      model: MODELS.smart,
-      max_tokens: 600,
+      model: AI_CONFIG.briefing.model,
+      max_tokens: AI_CONFIG.briefing.maxTokens,
       system: SYSTEM_PROMPT_BASE,
       messages: [
         {

@@ -1,4 +1,5 @@
-import { anthropic, MODELS, SYSTEM_PROMPT_BASE } from "../client";
+import { anthropic, SYSTEM_PROMPT_BASE } from "../client";
+import { AI_CONFIG } from "../ai-config";
 
 interface HabitInsightContext {
   habits: Array<{
@@ -20,8 +21,8 @@ export async function getHabitInsights(ctx: HabitInsightContext): Promise<string
     .join("\n");
 
   const message = await anthropic.messages.create({
-    model: MODELS.fast,
-    max_tokens: 400,
+    model: AI_CONFIG.healthInsight.model,
+    max_tokens: AI_CONFIG.healthInsight.maxTokens,
     system: SYSTEM_PROMPT_BASE,
     messages: [
       {
@@ -40,8 +41,8 @@ Focus on: what's working, what needs attention, and one specific improvement sug
 
 export async function suggestHabits(currentHabits: string[]): Promise<string> {
   const message = await anthropic.messages.create({
-    model: MODELS.fast,
-    max_tokens: 300,
+    model: AI_CONFIG.habitSuggestion.model,
+    max_tokens: AI_CONFIG.habitSuggestion.maxTokens,
     system: SYSTEM_PROMPT_BASE,
     messages: [
       {

@@ -8,7 +8,16 @@
       "Bash(pnpm exec *)",
       "Bash(git init *)",
       "Bash(git remote *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(pnpm --version)",
+      "Bash(npm --version)",
+      "Bash(brew list *)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(ls /usr/local/bin/ | grep -E \"node|pnpm|npm\" 2>/dev/null *)",
+      "Read(//usr/local/bin/**)",
+      "Read(//usr/bin/**)",
+      "Bash(cat ~/.zshrc 2>/dev/null | head -60)",
+      "Read(//Users/kandoewinpvtltd/**)"
     ]
   }
 }

@@ -1,4 +1,5 @@
-import { anthropic, MODELS, SYSTEM_PROMPT_BASE } from "../client";
+import { anthropic, SYSTEM_PROMPT_BASE } from "../client";
+import { AI_CONFIG } from "../ai-config";
 
 interface CareerContext {
   goals: Array<{
@@ -20,8 +21,8 @@ export async function getCareerInsights(ctx: CareerContext): Promise<string> {
     .join("\n");
 
   const message = await anthropic.messages.create({
-    model: MODELS.fast,
-    max_tokens: 400,
+    model: AI_CONFIG.careerInsight.model,
+    max_tokens: AI_CONFIG.careerInsight.maxTokens,
     system: SYSTEM_PROMPT_BASE,
     messages: [
       {
@@ -50,8 +51,8 @@ export async function* streamCareerCoach(
   const skillData = ctx.skills.map((s) => `${s.name} (L${s.level})`).join(", ");
 
   const stream = await anthropic.messages.create({
-    model: MODELS.smart,
-    max_tokens: 800,
+    model: AI_CONFIG.careerCoach.model,
+    max_tokens: AI_CONFIG.careerCoach.maxTokens,
     stream: true,
     system: `${SYSTEM_PROMPT_BASE}
 
