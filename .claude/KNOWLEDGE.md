@@ -12,6 +12,7 @@
 9. [Build, Start & Stop](#build-start--stop)
 10. [Development Workflow](#development-workflow)
 11. [Adding a New Feature Module](#adding-a-new-feature-module)
+12. [Agentic Development Workflow](#agentic-development-workflow)
 
 ---
 
@@ -395,3 +396,28 @@ Follow this checklist — the Journal module is the canonical example.
 5. **Page** — create `apps/web/src/app/(dashboard)/<feature>/page.tsx`
 6. **Sidebar link** — add nav item to `apps/web/src/components/layout/sidebar.tsx`
 7. **Build & deploy** — run the full deploy sequence above
+
+---
+
+## Agentic Development Workflow
+
+For feature work that follows a full product development lifecycle (requirements → planning → implementation → tests → review → PR), use the multi-agent pipeline documented in [AGENTIC_WORKFLOW.md](AGENTIC_WORKFLOW.md).
+
+**Six-agent pipeline:**
+
+| # | Agent | Responsibility | Output |
+|---|-------|---------------|--------|
+| 1 | PM | Interview → PRD → Jira ticket | `prd.md` + Jira issue |
+| 2 | Planner | Codebase analysis → implementation plan | `plan.md` |
+| 3 | Dev | Implement changes on feature branch | commits on `feature/SB-<n>-*` |
+| 4 | Tester | Write tests for changed code | test files + `test-report.md` |
+| 5 | Reviewer | Architect / Security / Perf review + auto-fix MUST issues | `review.md` |
+| 6 | PR | Push branch + open GitHub PR | PR URL |
+
+**Prerequisites before running:**
+```bash
+sudo apt install gh && gh auth login          # GitHub CLI
+# Add JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY to .env.local
+```
+
+See [AGENTIC_WORKFLOW.md](AGENTIC_WORKFLOW.md) for full agent prompts, file conventions, and the approval-gate protocol.
