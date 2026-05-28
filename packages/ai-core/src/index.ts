@@ -1,5 +1,9 @@
-export { anthropic, MODELS, SYSTEM_PROMPT_BASE } from "./client";
-export { AI_CONFIG } from "./ai-config";
+export { anthropic, MODELS, GEMINI_MODELS, GROQ_MODELS, SYSTEM_PROMPT_BASE } from "./client";
+export { AI_PROVIDER, getChatConfig } from "./ai-config";
+export type { AIFeature } from "./ai-config";
+export { chat, streamChat } from "./provider";
+export type { AIProvider, ChatConfig } from "./provider";
+export { shouldMockAI, aiErrorMessage } from "./shared";
 export { generateDailyBriefing } from "./agents/briefing-agent";
 export { getHabitInsights, suggestHabits } from "./agents/health-agent";
 export { getCareerInsights, streamCareerCoach } from "./agents/career-agent";

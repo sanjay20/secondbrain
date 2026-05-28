@@ -10,6 +10,18 @@ export const MODELS = {
   powerful: "claude-opus-4-7",
 } as const;
 
+// gemini-2.5-flash works on the free tier. gemini-2.5-pro / gemini-2.0-flash
+// require a paid plan (free-tier quota is 0) — swap once billing is enabled.
+export const GEMINI_MODELS = {
+  fast: "gemini-2.5-flash",
+  smart: "gemini-2.5-flash",
+} as const;
+
+export const GROQ_MODELS = {
+  fast: "llama-3.1-8b-instant",
+  smart: "llama-3.3-70b-versatile",
+} as const;
+
 export const SYSTEM_PROMPT_BASE = `You are SecondBrain AI — a personal life coach and intelligent assistant embedded in the user's SecondBrain app.
 
 Your role is to help the user:

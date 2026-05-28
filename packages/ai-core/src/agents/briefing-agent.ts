@@ -1,5 +1,7 @@
-import { anthropic, SYSTEM_PROMPT_BASE } from "../client";
-import { AI_CONFIG } from "../ai-config";
+import { SYSTEM_PROMPT_BASE } from "../client";
+import { getChatConfig } from "../ai-config";
+import { chat } from "../provider";
+import { shouldMockAI } from "../shared";
 
 interface BriefingContext {
   userName: string;
@@ -41,6 +43,8 @@ You've got this! 💪`;
 }
 
 export async function generateDailyBriefing(ctx: BriefingContext): Promise<string> {
+  if (shouldMockAI()) return getMockBriefing(ctx);
+
   try {
     const habitSummary = ctx.habits
       .map((h) => `- ${h.name}: ${h.streak} day streak, ${h.completedToday ? "✅ done today" : "⏳ pending"}`)
@@ -50,14 +54,10 @@ export async function generateDailyBriefing(ctx: BriefingContext): Promise<strin
       .map((g) => `- ${g.title}: ${g.progress}% complete${g.dueDate ? `, due ${g.dueDate}` : ""}`)
       .join("\n");
 
-    const message = await anthropic.messages.create({
-      model: AI_CONFIG.briefing.model,
-      max_tokens: AI_CONFIG.briefing.maxTokens,
-      system: SYSTEM_PROMPT_BASE,
-      messages: [
-        {
-          role: "user",
-          content: `Generate a personalized daily briefing for ${ctx.userName} for ${ctx.todayDate}.
+    return await chat(
+      getChatConfig("briefing"),
+      SYSTEM_PROMPT_BASE,
+      `Generate a personalized daily briefing for ${ctx.userName} for ${ctx.todayDate}.
 
 HABIT DATA:
 ${habitSummary || "No habits tracked yet."}
@@ -70,12 +70,8 @@ Write a motivating, insightful morning briefing (3-4 short paragraphs).
 - Highlight key habit streaks or wins
 - Surface the most important goal to focus on today
 - End with one specific actionable tip for today
-- Keep it concise and energizing, not preachy`,
-        },
-      ],
-    });
-
-    return (message.content[0] as { type: string; text: string }).text;
+- Keep it concise and energizing, not preachy`
+    );
   } catch (error) {
     console.log("[BRIEFING] API failed, using mock response:", error instanceof Error ? error.message : "Unknown error");
     return getMockBriefing(ctx);

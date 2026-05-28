@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { streamCareerCoach } from "@secondbrain/ai-core";
+import { streamCareerCoach, aiErrorMessage } from "@secondbrain/ai-core";
 
 export async function POST(req: Request) {
   const user = await requireUser();
@@ -24,6 +24,9 @@ export async function POST(req: Request) {
         for await (const chunk of generator) {
           controller.enqueue(encoder.encode(chunk));
         }
+      } catch (err) {
+        console.error("[AI CHAT] stream error:", err);
+        controller.enqueue(encoder.encode(aiErrorMessage(err)));
       } finally {
         controller.close();
       }

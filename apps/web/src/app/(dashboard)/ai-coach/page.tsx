@@ -12,6 +12,15 @@ interface Message {
   content: string;
 }
 
+// Put each sentence on its own line for easier reading. Preserves existing line
+// breaks and avoids splitting on list markers / decimals (e.g. "1." or "3.5").
+function oneSentencePerLine(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => line.replace(/(?<![0-9])([.!?])\s+(?=\S)/g, "$1\n"))
+    .join("\n");
+}
+
 const SUGGESTED_PROMPTS = [
   "What should I focus on today based on my habits?",
   "Help me break down my top career goal into steps",
@@ -77,7 +86,7 @@ export default function AICoachPage() {
         const updated = [...prev];
         updated[updated.length - 1] = {
           ...updated[updated.length - 1],
-          content: "Sorry, I encountered an error. Please check your API key and try again.",
+          content: "Sorry, I couldn't reach the AI service. Please check your connection and try again.",
         };
         return updated;
       });
@@ -103,12 +112,14 @@ export default function AICoachPage() {
               }
             </div>
             <div className={cn(
-              "max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
+              "max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line",
               msg.role === "assistant"
                 ? "bg-card border border-border text-foreground rounded-tl-sm"
                 : "bg-primary text-primary-foreground rounded-tr-sm"
             )}>
-              {msg.content || (streaming && i === messages.length - 1 && (
+              {msg.content
+                ? (msg.role === "assistant" ? oneSentencePerLine(msg.content) : msg.content)
+                : (streaming && i === messages.length - 1 && (
                 <span className="inline-flex gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: "150ms" }} />

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getHabitInsights } from "@secondbrain/ai-core";
+import { getHabitInsights, aiErrorMessage } from "@secondbrain/ai-core";
 
 export async function POST() {
   const user = await requireUser();
@@ -15,16 +15,20 @@ export async function POST() {
     return NextResponse.json({ insight: "Add some habits first, and I'll analyze your patterns!" });
   }
 
-  const insight = await getHabitInsights({
-    habits: habits.map((h) => ({
-      name: h.name,
-      category: h.category,
-      streak: h.streak,
-      bestStreak: h.bestStreak,
-      totalDone: h.totalDone,
-      completionRate: h.logs.length / 30,
-    })),
-  });
-
-  return NextResponse.json({ insight });
+  try {
+    const insight = await getHabitInsights({
+      habits: habits.map((h) => ({
+        name: h.name,
+        category: h.category,
+        streak: h.streak,
+        bestStreak: h.bestStreak,
+        totalDone: h.totalDone,
+        completionRate: h.logs.length / 30,
+      })),
+    });
+    return NextResponse.json({ insight });
+  } catch (err) {
+    console.error("[HEALTH INSIGHT] error:", err);
+    return NextResponse.json({ insight: aiErrorMessage(err) });
+  }
 }
