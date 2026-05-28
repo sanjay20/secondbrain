@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { NotebookPen, Sparkles, Plus, Trash2, CalendarDays, X } from "lucide-react";
+import { NotebookPen, Sparkles, Plus, Trash2, CalendarDays, X, Bell, BellOff } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { Header } from "@/components/layout/header";
@@ -46,6 +46,10 @@ const dayLabel = (key: string) => {
   return format(d, "EEEE, MMMM d, yyyy");
 };
 
+// datetime-local input needs "YYYY-MM-DDTHH:mm" format
+const toDatetimeLocal = (d: Date) => format(d, "yyyy-MM-dd'T'HH:mm");
+const minDatetime = () => toDatetimeLocal(new Date(Date.now() + 60_000));
+
 export default function JournalPage() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +60,9 @@ export default function JournalPage() {
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
+  // entryId → datetime-local string being edited
+  const [reminderDraft, setReminderDraft] = useState<Record<string, string>>({});
+  const [reminderSaving, setReminderSaving] = useState<Record<string, boolean>>({});
 
   const groups = useMemo(() => {
     const visible = selectedDate
@@ -83,6 +90,13 @@ export default function JournalPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Register service worker for push notifications
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {/* non-critical */});
+    }
+  }, []);
 
   async function addEntry() {
     if (!content.trim()) return;
@@ -127,6 +141,62 @@ export default function JournalPage() {
     } finally {
       setAiLoading(false);
     }
+  }
+
+  async function requestPushPermission() {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return false;
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return false;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      });
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function setReminder(entryId: string, scheduledAt: string) {
+    setReminderSaving((s) => ({ ...s, [entryId]: true }));
+    try {
+      // Ask for push permission on first reminder set
+      if ("Notification" in window && Notification.permission === "default") {
+        await requestPushPermission();
+      }
+      const res = await fetch("/api/reminders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ journalEntryId: entryId, scheduledAt: new Date(scheduledAt).toISOString() }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { error?: string };
+        toast.error(err.error ?? "Failed to set reminder");
+        return;
+      }
+      toast.success("Reminder set");
+      setReminderDraft((d) => { const n = { ...d }; delete n[entryId]; return n; });
+      fetchData();
+    } catch {
+      toast.error("Failed to set reminder");
+    } finally {
+      setReminderSaving((s) => ({ ...s, [entryId]: false }));
+    }
+  }
+
+  async function cancelReminder(reminderId: string, entryId: string) {
+    const res = await fetch(`/api/reminders/${reminderId}`, { method: "DELETE" });
+    if (!res.ok) { toast.error("Failed to cancel reminder"); return; }
+    toast.success("Reminder cancelled");
+    setReminderDraft((d) => { const n = { ...d }; delete n[entryId]; return n; });
+    fetchData();
   }
 
   return (
@@ -251,6 +321,10 @@ export default function JournalPage() {
                 </div>
                 {dayEntries.map((entry) => {
                   const cat = categoryMeta(entry.category);
+                  const reminder = entry.reminder;
+                  const draft = reminderDraft[entry.id];
+                  const isSaving = reminderSaving[entry.id] ?? false;
+
                   return (
                     <div key={entry.id} className="glass rounded-xl p-4 group animate-fade-in">
                       <div className="flex items-start justify-between gap-3">
@@ -268,17 +342,80 @@ export default function JournalPage() {
                               <span className="text-[11px] text-muted-foreground">
                                 {format(new Date(entry.createdAt), "h:mm a")}
                               </span>
+
+                              {/* Reminder badge */}
+                              {reminder?.status === "pending" && (
+                                <button
+                                  onClick={() => cancelReminder(reminder.id, entry.id)}
+                                  className="flex items-center gap-1 text-[11px] text-orange-400 hover:text-destructive transition-colors"
+                                  title="Click to cancel reminder"
+                                >
+                                  <Bell className="w-3 h-3" />
+                                  {format(new Date(reminder.scheduledAt), "MMM d, h:mm a")}
+                                </button>
+                              )}
+                              {reminder?.status === "sent" && (
+                                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                  <BellOff className="w-3 h-3" />
+                                  Sent {format(new Date(reminder.scheduledAt), "MMM d")}
+                                </span>
+                              )}
                             </div>
+
+                            {/* Reminder picker (shown when draft is open) */}
+                            {draft !== undefined && (
+                              <div className="flex items-center gap-2 mt-3">
+                                <Input
+                                  type="datetime-local"
+                                  value={draft}
+                                  min={minDatetime()}
+                                  onChange={(e) => setReminderDraft((d) => ({ ...d, [entry.id]: e.target.value }))}
+                                  className="h-8 text-xs w-auto [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                />
+                                <Button
+                                  size="sm"
+                                  className="h-8 text-xs"
+                                  disabled={!draft || isSaving}
+                                  onClick={() => setReminder(entry.id, draft)}
+                                >
+                                  {isSaving ? "Saving…" : "Confirm"}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-xs"
+                                  onClick={() => setReminderDraft((d) => { const n = { ...d }; delete n[entry.id]; return n; })}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteEntry(entry.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Bell button — only show if no pending reminder and draft not open */}
+                          {(!reminder || reminder.status === "sent" || reminder.status === "cancelled") && draft === undefined && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setReminderDraft((d) => ({ ...d, [entry.id]: minDatetime() }))}
+                              className="text-muted-foreground hover:text-orange-400"
+                              title="Set reminder"
+                            >
+                              <Bell className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteEntry(entry.id)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
