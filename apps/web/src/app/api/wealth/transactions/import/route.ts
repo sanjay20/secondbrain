@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     await tx.transaction.createMany({
       data: toCreate.map(r => ({
         userId: user.id,
-        accountId,
+        accountId: account.id,
         type: r.type,
         amountPaise: r.amountPaise,
         category: r.type === "income" ? "Other Income" : "Other",
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
 
     const netChange = toCreate.reduce((sum, r) => sum + (r.type === "income" ? r.amountPaise : -r.amountPaise), 0);
     if (netChange !== 0) {
-      await tx.wealthAccount.update({ where: { id: accountId }, data: { balancePaise: { increment: netChange } } });
+      await tx.wealthAccount.update({ where: { id: account.id }, data: { balancePaise: { increment: netChange } } });
     }
   });
 
