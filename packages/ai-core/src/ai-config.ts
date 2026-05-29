@@ -19,7 +19,8 @@ export type AIFeature =
   | "careerInsight"
   | "careerCoach"
   | "knowledgeInsight"
-  | "journalInsight";
+  | "journalInsight"
+  | "wealthInsight";
 
 /**
  * Per-feature settings. Each feature lists the model to use for every provider
@@ -41,6 +42,7 @@ const FEATURES: Record<
   careerCoach: { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
   knowledgeInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
   journalInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
+  wealthInsight:  { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1000 },
 };
 
 /** Resolve the provider + model + token budget for a feature. */
