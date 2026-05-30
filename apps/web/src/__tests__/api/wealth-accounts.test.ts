@@ -253,4 +253,10 @@ describe("PATCH /api/wealth/accounts/[id]", () => {
     expect(res.status).toBe(400);
     expect(db.wealthAccount.update).not.toHaveBeenCalled();
   });
+
+  it("returns 400 for an empty patch (no fields to update)", async () => {
+    const res = await PATCH(makeReq({}), makeCtx("a-1"));
+    expect(res.status).toBe(400);
+    expect(db.wealthAccount.update).not.toHaveBeenCalled();
+  });
 });

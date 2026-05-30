@@ -15,7 +15,7 @@ const patchSchema = z.object({
   creditLimitPaise: z.number().int().nonnegative().optional(),
   minimumPaymentPaise: z.number().int().nonnegative().optional(),
   isArchived: z.boolean().optional(),
-});
+}).refine((obj) => Object.keys(obj).length > 0, { message: "No fields to update" });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();

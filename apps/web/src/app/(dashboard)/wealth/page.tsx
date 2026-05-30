@@ -876,7 +876,7 @@ export default function WealthPage() {
                     )}
 
                     {/* Interest + EMI line */}
-                    {(interestPct ?? acc.emiPaise) && (
+                    {(interestPct !== null || (acc.emiPaise ?? 0) > 0) && (
                       <div className="flex gap-4 text-xs text-muted-foreground">
                         {interestPct && <span>{interestPct}% p.a.</span>}
                         {acc.emiPaise ? <span>EMI {formatINR(acc.emiPaise)}/mo</span> : null}
