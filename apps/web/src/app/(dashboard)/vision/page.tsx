@@ -6,7 +6,10 @@ import { toast } from "sonner";
 import { Header } from "@/components/layout/header";
 import { VisionCard } from "@/components/vision/vision-card";
 import { VisionForm } from "@/components/vision/vision-form";
+import { FiveYearGoalsTab } from "@/components/vision/five-year-goals-tab";
+import { MonthlyReviewTab } from "@/components/vision/monthly-review-tab";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { VisionArea } from "@secondbrain/types";
 
 export default function VisionPage() {
@@ -60,48 +63,69 @@ export default function VisionPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-fuchsia-400" />
-            <span className="font-medium text-sm text-muted-foreground">
-              {areas.length} area{areas.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={getAiInsight} disabled={aiLoading}>
-              <Sparkles className="w-3.5 h-3.5" />
-              {aiLoading ? "Analyzing..." : "AI Insights"}
-            </Button>
-            <VisionForm onSuccess={fetchData} />
-          </div>
+        <div className="flex items-center justify-end">
+          <Button variant="outline" size="sm" onClick={getAiInsight} disabled={aiLoading}>
+            <Sparkles className="w-3.5 h-3.5" />
+            {aiLoading ? "Analyzing..." : "AI Insights"}
+          </Button>
         </div>
 
-        {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-40 rounded-xl bg-secondary/50 animate-pulse" />
-            ))}
-          </div>
-        ) : areas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-fuchsia-400/10 flex items-center justify-center">
-              <Compass className="w-8 h-8 text-fuchsia-400" />
+        <Tabs defaultValue="vision-areas">
+          <TabsList className="mb-4">
+            <TabsTrigger value="vision-areas">Vision Areas</TabsTrigger>
+            <TabsTrigger value="five-year-goals">5-Year Goals</TabsTrigger>
+            <TabsTrigger value="monthly-review">Monthly Review</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="vision-areas">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Compass className="w-5 h-5 text-fuchsia-400" />
+                  <span className="font-medium text-sm text-muted-foreground">
+                    {areas.length} area{areas.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <VisionForm onSuccess={fetchData} />
+              </div>
+
+              {loading ? (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-40 rounded-xl bg-secondary/50 animate-pulse" />
+                  ))}
+                </div>
+              ) : areas.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-fuchsia-400/10 flex items-center justify-center">
+                    <Compass className="w-8 h-8 text-fuchsia-400" />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="font-semibold">No vision areas yet</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Define the areas of life that matter most and write your long-term vision for each.
+                    </p>
+                  </div>
+                  <VisionForm onSuccess={fetchData} />
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {areas.map((area) => (
+                    <VisionCard key={area.id} area={area} onUpdate={fetchData} />
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="text-center">
-              <h3 className="font-semibold">No vision areas yet</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Define the areas of life that matter most and write your long-term vision for each.
-              </p>
-            </div>
-            <VisionForm onSuccess={fetchData} />
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {areas.map((area) => (
-              <VisionCard key={area.id} area={area} onUpdate={fetchData} />
-            ))}
-          </div>
-        )}
+          </TabsContent>
+
+          <TabsContent value="five-year-goals">
+            <FiveYearGoalsTab />
+          </TabsContent>
+
+          <TabsContent value="monthly-review">
+            <MonthlyReviewTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
