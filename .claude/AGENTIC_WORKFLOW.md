@@ -129,16 +129,35 @@ node --version
 ### Agent 1 — PM Agent (`pm`)
 
 **Model:** `claude-sonnet-4-6`
-**Role:** Product Manager. Conducts a structured interview, writes a Product Requirement Document (PRD), and creates a Jira issue.
+**Role:** Product Manager. Optionally reads an existing Jira ticket, conducts a gap-filling interview only for missing information, writes a PRD, and creates or updates a Jira issue.
 
-**Input:** Free-text description of the feature/bug from the user.
+**Input:**
+- Free-text description of the feature/bug from the user (optional if Jira ticket is provided).
+- Optional: existing Jira ticket key (e.g. `SB-42`). When provided, the agent fetches the ticket first and skips interview questions already answered there.
 
 **Output:**
 - `.claude/workflow/<run-id>/prd.md` — full PRD
-- `.claude/workflow/<run-id>/jira-ticket.json` — Jira issue payload
+- `.claude/workflow/<run-id>/jira-ticket.json` — Jira issue payload (existing or newly created)
 - Jira ticket URL printed to stdout
 
-**Interview questions it asks:**
+**Decision logic:**
+
+```
+IF jira_ticket_key is provided:
+  1. Fetch ticket from Jira API (GET /rest/api/3/issue/<key>)
+  2. Extract: summary, description, acceptance criteria, priority, labels, story points
+  3. Map each of the 7 interview questions against what the ticket already answers
+  4. Ask ONLY the questions that are unanswered or vague (may be 0 questions)
+  5. Merge ticket content + interview answers → write PRD
+  6. Save existing ticket JSON to jira-ticket.json (no new ticket created)
+ELSE:
+  1. Ask all 7 interview questions one at a time
+  2. Write PRD from answers
+  3. Create a new Jira issue via POST /rest/api/3/issue
+  4. Save new ticket JSON to jira-ticket.json
+```
+
+**Interview questions (asked only when the ticket doesn't already answer them):**
 1. What problem does this solve for the user?
 2. Who is the primary user / persona?
 3. What is the expected behaviour? (happy path)
@@ -147,8 +166,13 @@ node --version
 6. Priority: critical / high / medium / low?
 7. Any dependencies on other tickets or external services?
 
-**Jira API call it makes:**
+**Jira API calls it makes:**
 ```
+# Fetch existing ticket (when ticket key supplied)
+GET https://$JIRA_BASE_URL/rest/api/3/issue/<key>
+Authorization: Basic base64($JIRA_EMAIL:$JIRA_API_TOKEN)
+
+# Create new ticket (when no ticket key supplied)
 POST https://$JIRA_BASE_URL/rest/api/3/issue
 Authorization: Basic base64($JIRA_EMAIL:$JIRA_API_TOKEN)
 Content-Type: application/json
@@ -182,21 +206,49 @@ Why this matters and who is affected.
 ```
 You are the PM Agent for the SecondBrain project.
 Model: claude-sonnet-4-6
-Your job is to:
-1. Ask the user the 7 interview questions listed in AGENTIC_WORKFLOW.md one at a time.
-2. After gathering answers, write a PRD following the template and save it to
-   .claude/workflow/<run-id>/prd.md.
-3. Create a Jira issue using the REST API (credentials in .env.local).
-   Issue type: "Story" for features, "Bug" for bugs, "Task" for small tasks.
-   Save the created issue JSON to .claude/workflow/<run-id>/jira-ticket.json.
-4. Write .claude/workflow/<run-id>/handoff.json:
-   { "agent": "pm", "status": "done", "run_id": "<run-id>", "ticket": "<SB-n>",
-     "branch": null, "next_agent": "planner",
-     "summary": "PRD written. Jira ticket <SB-n> created." }
-5. Print the Jira ticket URL and key (e.g. SB-42) when done.
 
-Feature description from user: "<paste user description here>"
+Jira ticket (optional): <SB-n or "none">
+Feature description (optional): "<paste user description here>"
 Run ID: <timestamp e.g. 20260529-1430>
+
+Your job:
+
+STEP 1 — Gather context
+  IF a Jira ticket key was provided (not "none"):
+    a. Load credentials from .env.local (JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN).
+    b. Fetch the ticket:
+         GET $JIRA_BASE_URL/rest/api/3/issue/<key>
+         Authorization: Basic base64($JIRA_EMAIL:$JIRA_API_TOKEN)
+    c. Save the raw response to .claude/workflow/<run-id>/jira-ticket.json.
+    d. Review the ticket content against the 7 interview questions:
+         1. What problem does this solve for the user?
+         2. Who is the primary user / persona?
+         3. What is the expected behaviour? (happy path)
+         4. What are the edge cases or constraints?
+         5. Is this a small task (≤ 1 day) or a feature (> 1 day)?
+         6. Priority: critical / high / medium / low?
+         7. Any dependencies on other tickets or external services?
+    e. For each question already clearly answered in the ticket, mark it as resolved.
+    f. Ask the user ONLY the questions that remain unanswered or are too vague.
+       If all questions are answered, skip the interview entirely and proceed to STEP 2.
+  ELSE:
+    a. Ask the user all 7 questions above, one at a time.
+    b. After gathering answers, create a new Jira issue:
+         POST $JIRA_BASE_URL/rest/api/3/issue
+         Issue type: "Story" for features, "Bug" for bugs, "Task" for small tasks.
+    c. Save the created issue JSON to .claude/workflow/<run-id>/jira-ticket.json.
+
+STEP 2 — Write PRD
+  Merge ticket content (if any) and interview answers.
+  Write a PRD following the template in AGENTIC_WORKFLOW.md.
+  Save to .claude/workflow/<run-id>/prd.md.
+
+STEP 3 — Handoff
+  Write .claude/workflow/<run-id>/handoff.json:
+  { "agent": "pm", "status": "done", "run_id": "<run-id>", "ticket": "<SB-n>",
+    "branch": null, "next_agent": "planner",
+    "summary": "PRD written. Jira ticket <SB-n> used/created." }
+  Print the Jira ticket URL and key (e.g. SB-42) when done.
 ```
 
 ---
@@ -488,17 +540,21 @@ The orchestrator is the main Claude Code session. It spawns agents in sequence u
 ```
 run_id = timestamp()
 next_agent = "pm"
+jira_ticket = <provided by user, or null>   # e.g. "SB-42" or null
 
 while next_agent is not null:
   1. Read .claude/workflow/<run-id>/handoff.json (if exists)
-  2. Spawn Agent(model=<agent.model>, prompt=<agent.prompt>)
-  3. Agent completes → writes handoff.json
-  4. Read handoff.json:
+  2. Build agent prompt, substituting run_id and jira_ticket where applicable:
+       - PM Agent: pass jira_ticket (or "none") in the prompt header
+       - All other agents: pass ticket key from handoff.json
+  3. Spawn Agent(model=<agent.model>, prompt=<agent.prompt>)
+  4. Agent completes → writes handoff.json
+  5. Read handoff.json:
        if status == "failed"  → stop, report error
        if status == "needs_human" → pause, ask user, resume
        if status == "done"    → show summary to user
-  5. PAUSE — ask user: Approve / Edit / Abort
-  6. next_agent = handoff.json["next_agent"]
+  6. PAUSE — ask user: Approve / Edit / Abort
+  7. next_agent = handoff.json["next_agent"]
 ```
 
 ### Manual invocation (per agent)
@@ -507,14 +563,25 @@ Paste the relevant prompt block from above into a Claude Code session, substitut
 
 ### Semi-automated invocation via `/run-workflow`
 
-You can invoke the whole pipeline from a single Claude Code message:
+You can invoke the whole pipeline from a single Claude Code message.
 
+**Starting from a description (PM agent creates a new Jira ticket):**
 ```
 /run-workflow SB feature "Add dark-mode toggle to settings page"
 ```
 
+**Starting from an existing Jira ticket (PM agent reads it, interviews only for gaps):**
+```
+/run-workflow SB-42
+```
+
+**Starting from a Jira ticket with an additional description hint:**
+```
+/run-workflow SB-42 "also handle mobile viewport edge case"
+```
+
 This triggers the orchestrator to:
-1. Spawn PM Agent (`sonnet`) → writes handoff.json → **pause for your approval**
+1. Spawn PM Agent (`sonnet`) — reads Jira ticket if provided, interviews for gaps → writes PRD + handoff.json → **pause for your approval**
 2. Spawn Planner Agent (`opus`) → writes handoff.json → **pause for your approval**
 3. Spawn Dev Agent (`sonnet`) → writes handoff.json → **pause for your approval**
 4. Spawn Test Agent (`sonnet`) → writes handoff.json → **pause for your approval**

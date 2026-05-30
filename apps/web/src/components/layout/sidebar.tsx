@@ -13,6 +13,7 @@ import {
   Sparkles,
   Settings,
   ChevronRight,
+  ListTodo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav";
@@ -53,6 +54,12 @@ const navItems = [
     href: "/journal",
     icon: NotebookPen,
     color: "text-orange-400",
+  },
+  {
+    label: "Daily Work",
+    href: "/dailywork",
+    icon: ListTodo,
+    color: "text-cyan-400",
   },
   {
     label: "AI Coach",

@@ -201,6 +201,74 @@ export const formatINR = (paise: number): string =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })
     .format(paise / 100);
 
+// ─── Daily Work types ─────────────────────────────────────────────────────────
+
+export const PILLAR_TAGS = ["knowledge", "career", "finance", "habits"] as const;
+export type PillarTag = (typeof PILLAR_TAGS)[number];
+
+export type TaskStatus = "todo" | "in_progress" | "done";
+export type TaskPriority = "low" | "medium" | "high" | "critical";
+
+export interface Task {
+  id: string;
+  userId: string;
+  title: string;
+  notes?: string | null;
+  pillar?: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  scheduledDate: Date;
+  originalDate?: Date | null;
+  rolledOver: boolean;
+  completedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TimeBlock {
+  id: string;
+  userId: string;
+  taskId?: string | null;
+  goalId?: string | null;
+  label: string;
+  startTime: Date;
+  endTime: Date;
+  googleEventId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  task?: Task | null;
+}
+
+export interface WeeklyReview {
+  id: string;
+  userId: string;
+  weekStart: Date;
+  weekEnd: Date;
+  content: WeeklyReviewContent;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface WeeklyReviewContent {
+  completedTasks: number;
+  totalTasks: number;
+  habitCompletionRate: number;
+  notes?: string;
+  highlights?: string;
+  improvements?: string;
+}
+
+export interface DayPlanItem {
+  title: string;
+  rationale: string;
+  taskId?: string;
+}
+
+export interface PlannerResult {
+  items: DayPlanItem[];
+  generatedAt: string;
+}
+
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {
