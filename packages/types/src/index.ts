@@ -139,6 +139,14 @@ export interface WealthAccount {
   balancePaise: number;
   institution?: string | null;
   isLiability: boolean;
+  originalPrincipalPaise?: number | null;
+  interestRateBps?: number | null;
+  emiPaise?: number | null;
+  tenureMonths?: number | null;
+  paidMonths: number;
+  creditLimitPaise?: number | null;
+  minimumPaymentPaise?: number | null;
+  isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -181,9 +189,13 @@ export interface SavingsGoal {
   updatedAt: Date;
 }
 
-export type AccountType = "bank" | "investment" | "property" | "vehicle" | "cash" | "loan" | "credit_card" | "other";
+export type AccountType = "bank" | "investment" | "property" | "vehicle" | "cash" | "loan" | "credit_card" | "home_loan" | "car_loan" | "personal_loan" | "education_loan" | "other";
+export type LiabilityType = "loan" | "credit_card" | "home_loan" | "car_loan" | "personal_loan" | "education_loan";
 export type TransactionType = "income" | "expense" | "transfer";
 export type InvestmentType = "mutual_fund" | "stock" | "fd" | "ppf" | "gold" | "crypto" | "other";
+
+export const LIABILITY_TYPES: ReadonlySet<string> = new Set<LiabilityType>(["loan", "credit_card", "home_loan", "car_loan", "personal_loan", "education_loan"]);
+export const isLiabilityType = (t: string): boolean => LIABILITY_TYPES.has(t);
 
 export const formatINR = (paise: number): string =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })
