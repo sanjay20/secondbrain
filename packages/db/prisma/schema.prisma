@@ -38,6 +38,7 @@ model User {
   visionAreas         VisionArea[]
   fiveYearGoals       FiveYearGoal[]
   monthlyGoals        MonthlyGoal[]
+  bucketListItems     BucketListItem[]
 
   @@map("users")
 }
@@ -378,6 +379,21 @@ model MonthlyGoal {
   @@index([userId])
   @@index([fiveYearGoalId])
   @@map("monthly_goals")
+}
+
+model BucketListItem {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  category    String    @default("experience")
+  notes       String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("bucket_list_items")
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
