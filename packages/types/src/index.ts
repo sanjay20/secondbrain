@@ -282,6 +282,37 @@ export interface VisionArea {
   updatedAt: Date;
 }
 
+export const PILLARS = ["career", "wealth", "health", "knowledge", "relationships", "personal"] as const;
+export type Pillar = (typeof PILLARS)[number];
+export type FiveYearGoalStatus = "active" | "archived";
+export type MonthlyGoalStatus = "todo" | "in_progress" | "done";
+
+export interface FiveYearGoal {
+  id: string;
+  userId: string;
+  pillar: string;
+  goal: string;
+  targetYear: number;
+  progress: number;
+  notes?: string | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  monthlyGoals?: MonthlyGoal[];
+}
+
+export interface MonthlyGoal {
+  id: string;
+  userId: string;
+  fiveYearGoalId: string;
+  title: string;
+  month: string;
+  status: string;
+  notes?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {

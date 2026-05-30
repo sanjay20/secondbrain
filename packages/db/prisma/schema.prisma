@@ -36,6 +36,8 @@ model User {
   weeklyReviews       WeeklyReview[]
   calendarConnection  CalendarConnection?
   visionAreas         VisionArea[]
+  fiveYearGoals       FiveYearGoal[]
+  monthlyGoals        MonthlyGoal[]
 
   @@map("users")
 }
@@ -339,6 +341,43 @@ model VisionArea {
 
   @@index([userId])
   @@map("vision_areas")
+}
+
+model FiveYearGoal {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pillar     String
+  goal       String
+  targetYear Int
+  progress   Int      @default(0)
+  notes      String?
+  status     String   @default("active")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  monthlyGoals MonthlyGoal[]
+
+  @@index([userId])
+  @@map("five_year_goals")
+}
+
+model MonthlyGoal {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fiveYearGoalId String
+  fiveYearGoal   FiveYearGoal @relation(fields: [fiveYearGoalId], references: [id], onDelete: Cascade)
+  title          String
+  month          String
+  status         String       @default("todo")
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([fiveYearGoalId])
+  @@map("monthly_goals")
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────────────

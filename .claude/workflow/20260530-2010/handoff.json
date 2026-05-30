@@ -1,0 +1,9 @@
+{
+  "agent": "reviewer",
+  "status": "done",
+  "run_id": "20260530-2010",
+  "ticket": "SB-37",
+  "branch": "feature/SB-37-five-year-goals",
+  "next_agent": "pr",
+  "summary": "0 MUST FIX resolved. 3 SHOULD FIX left for human review."
+}
