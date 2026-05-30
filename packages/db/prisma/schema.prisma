@@ -169,16 +169,24 @@ model Reminder {
 // ─── WEALTH ──────────────────────────────────────────────────────────────────
 
 model WealthAccount {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name         String
-  type         String
-  balancePaise Int      @default(0)
-  institution  String?
-  isLiability  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                  String
+  type                  String
+  balancePaise          Int       @default(0)
+  institution           String?
+  isLiability           Boolean   @default(false)
+  originalPrincipalPaise Int?
+  interestRateBps       Int?
+  emiPaise              Int?
+  tenureMonths          Int?
+  paidMonths            Int       @default(0)
+  creditLimitPaise      Int?
+  minimumPaymentPaise   Int?
+  isArchived            Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   transactions Transaction[]
 

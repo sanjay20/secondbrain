@@ -2,15 +2,22 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-
-const LIABILITY_TYPES = new Set(["loan", "credit_card"]);
+import { isLiabilityType } from "@secondbrain/types";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   type: z.string().min(1),
-  balancePaise: z.number().int().default(0),
+  balancePaise: z.number().int().min(0).default(0),
   institution: z.string().max(100).optional(),
   isLiability: z.boolean().optional(),
+  originalPrincipalPaise: z.number().int().nonnegative().optional(),
+  interestRateBps: z.number().int().nonnegative().optional(),
+  emiPaise: z.number().int().nonnegative().optional(),
+  tenureMonths: z.number().int().nonnegative().optional(),
+  paidMonths: z.number().int().nonnegative().optional(),
+  creditLimitPaise: z.number().int().nonnegative().optional(),
+  minimumPaymentPaise: z.number().int().nonnegative().optional(),
+  isArchived: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -33,7 +40,9 @@ export async function POST(req: Request) {
     data: {
       ...data,
       userId: user.id,
-      isLiability: data.isLiability ?? LIABILITY_TYPES.has(data.type),
+      isLiability: data.isLiability ?? isLiabilityType(data.type),
+      paidMonths: data.paidMonths ?? 0,
+      isArchived: data.isArchived ?? false,
     },
   });
   return NextResponse.json(account, { status: 201 });

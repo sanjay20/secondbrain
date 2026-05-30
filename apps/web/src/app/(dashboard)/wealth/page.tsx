@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Wallet, TrendingUp, TrendingDown, Sparkles, Plus, Trash2, Upload, Target, PiggyBank, BarChart3 } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Sparkles, Plus, Trash2, Upload, Target, PiggyBank, BarChart3, CheckCircle2, Edit2, X, Home, Car, GraduationCap, CreditCard, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Header } from "@/components/layout/header";
@@ -28,6 +28,15 @@ const ACCOUNT_TYPES = [
   { value: "other", label: "Other", icon: "📦" },
 ];
 
+const LIABILITY_ACCOUNT_TYPES = [
+  { value: "home_loan", label: "Home Loan", Icon: Home },
+  { value: "car_loan", label: "Car Loan", Icon: Car },
+  { value: "personal_loan", label: "Personal Loan", Icon: Building2 },
+  { value: "education_loan", label: "Education Loan", Icon: GraduationCap },
+  { value: "credit_card", label: "Credit Card", Icon: CreditCard },
+  { value: "loan", label: "Other Loan", Icon: Building2 },
+];
+
 const EXPENSE_CATEGORIES = ["Housing", "Food", "Transport", "Healthcare", "Education", "Entertainment", "Shopping", "Utilities", "Investment", "Other"];
 const INCOME_CATEGORIES = ["Salary", "Freelance", "Business", "Investment Return", "Gift", "Other Income"];
 const INVESTMENT_TYPES = [
@@ -41,6 +50,7 @@ const INVESTMENT_TYPES = [
 ];
 
 const accountMeta = (type: string) => ACCOUNT_TYPES.find(a => a.value === type) ?? { value: type, label: type, icon: "📦" };
+const liabilityMeta = (type: string) => LIABILITY_ACCOUNT_TYPES.find(l => l.value === type) ?? { value: type, label: type, Icon: Building2 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -93,6 +103,21 @@ export default function WealthPage() {
   const [updatingGoal, setUpdatingGoal] = useState<string | null>(null);
   const [goalUpdateAmt, setGoalUpdateAmt] = useState("");
 
+  // Liability form
+  const [liabType, setLiabType] = useState("home_loan");
+  const [liabName, setLiabName] = useState("");
+  const [liabBalance, setLiabBalance] = useState("");
+  const [liabInstitution, setLiabInstitution] = useState("");
+  const [liabOriginalPrincipal, setLiabOriginalPrincipal] = useState("");
+  const [liabInterestRate, setLiabInterestRate] = useState("");
+  const [liabEmi, setLiabEmi] = useState("");
+  const [liabTenure, setLiabTenure] = useState("");
+  const [liabCreditLimit, setLiabCreditLimit] = useState("");
+  const [addingLiab, setAddingLiab] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [editingLiab, setEditingLiab] = useState<string | null>(null);
+  const [editLiabBalance, setEditLiabBalance] = useState("");
+
   const fetchAll = useCallback(async () => {
     try {
       const [accs, txs, invs, gs] = await Promise.all([
@@ -115,8 +140,9 @@ export default function WealthPage() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   // ── Derived stats ──────────────────────────────────────────────────────────
-  const assets = accounts.filter(a => !a.isLiability).reduce((s, a) => s + a.balancePaise, 0);
-  const liabilities = accounts.filter(a => a.isLiability).reduce((s, a) => s + a.balancePaise, 0);
+  // Exclude archived (paid-off) liabilities from net worth (AC-6)
+  const assets = accounts.filter(a => !a.isLiability && !a.isArchived).reduce((s, a) => s + a.balancePaise, 0);
+  const liabilities = accounts.filter(a => a.isLiability && !a.isArchived).reduce((s, a) => s + a.balancePaise, 0);
   const netWorth = assets - liabilities;
 
   const now = new Date();
@@ -130,6 +156,14 @@ export default function WealthPage() {
 
   const totalInvested = investments.reduce((s, i) => s + i.buyPricePaise * i.units, 0);
   const totalCurrent = investments.reduce((s, i) => s + i.currentPricePaise * i.units, 0);
+
+  // Liability-specific derived values
+  const liabilityAccounts = accounts.filter(a => a.isLiability);
+  const activeLiabilities = liabilityAccounts.filter(a => !a.isArchived);
+  const archivedLiabilities = liabilityAccounts.filter(a => a.isArchived);
+  const totalOutstanding = activeLiabilities.reduce((s, a) => s + a.balancePaise, 0);
+  const totalEmi = activeLiabilities.reduce((s, a) => s + (a.emiPaise ?? 0), 0);
+  const displayedLiabilities = showArchived ? liabilityAccounts : activeLiabilities;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -279,6 +313,76 @@ export default function WealthPage() {
     fetchAll();
   }
 
+  async function addLiability() {
+    if (!liabName.trim() || !liabBalance) return;
+    setAddingLiab(true);
+    const isCreditCard = liabType === "credit_card";
+    try {
+      const body: Record<string, unknown> = {
+        name: liabName.trim(),
+        type: liabType,
+        balancePaise: Math.round(parseFloat(liabBalance) * 100),
+        institution: liabInstitution.trim() || undefined,
+        isLiability: true,
+      };
+      if (!isCreditCard) {
+        if (liabOriginalPrincipal) body.originalPrincipalPaise = Math.round(parseFloat(liabOriginalPrincipal) * 100);
+        if (liabTenure) body.tenureMonths = parseInt(liabTenure);
+      }
+      if (liabInterestRate) body.interestRateBps = Math.round(parseFloat(liabInterestRate) * 100);
+      if (liabEmi) body.emiPaise = Math.round(parseFloat(liabEmi) * 100);
+      if (isCreditCard && liabCreditLimit) body.creditLimitPaise = Math.round(parseFloat(liabCreditLimit) * 100);
+
+      const res = await fetch("/api/wealth/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error();
+      setLiabName(""); setLiabBalance(""); setLiabInstitution(""); setLiabOriginalPrincipal("");
+      setLiabInterestRate(""); setLiabEmi(""); setLiabTenure(""); setLiabCreditLimit("");
+      toast.success("Liability added");
+      fetchAll();
+    } catch { toast.error("Failed to add liability"); }
+    finally { setAddingLiab(false); }
+  }
+
+  async function updateLiabilityBalance(id: string) {
+    const balancePaise = Math.round(parseFloat(editLiabBalance) * 100);
+    if (isNaN(balancePaise) || balancePaise < 0) { toast.error("Invalid amount"); return; }
+    const res = await fetch(`/api/wealth/accounts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ balancePaise }),
+    });
+    if (!res.ok) { toast.error("Failed to update"); return; }
+    toast.success("Balance updated");
+    setEditingLiab(null); setEditLiabBalance("");
+    fetchAll();
+  }
+
+  async function markPaidOff(id: string) {
+    const res = await fetch(`/api/wealth/accounts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isArchived: true }),
+    });
+    if (!res.ok) { toast.error("Failed to archive"); return; }
+    toast.success("Marked as paid off");
+    fetchAll();
+  }
+
+  async function restoreLiability(id: string) {
+    const res = await fetch(`/api/wealth/accounts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isArchived: false }),
+    });
+    if (!res.ok) { toast.error("Failed to restore"); return; }
+    toast.success("Restored to active");
+    fetchAll();
+  }
+
   async function getInsights() {
     setAiLoading(true);
     try {
@@ -313,6 +417,7 @@ export default function WealthPage() {
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="investments">Investments</TabsTrigger>
             <TabsTrigger value="goals">Goals</TabsTrigger>
+            <TabsTrigger value="liabilities">Liabilities</TabsTrigger>
           </TabsList>
 
           {/* ── OVERVIEW ─────────────────────────────────────────────────── */}
@@ -349,7 +454,7 @@ export default function WealthPage() {
               <div className="space-y-2">
                 {accounts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No accounts yet. Add one below.</p>
-                ) : accounts.map(acc => {
+                ) : accounts.filter(a => !a.isArchived).map(acc => {
                   const meta = accountMeta(acc.type);
                   return (
                     <div key={acc.id} className="flex items-center justify-between gap-3 group">
@@ -626,6 +731,179 @@ export default function WealthPage() {
                       <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setUpdatingGoal(goal.id)}>
                         <Plus className="w-3 h-3" /> Add savings
                       </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </TabsContent>
+
+          {/* ── LIABILITIES ──────────────────────────────────────────────── */}
+          <TabsContent value="liabilities" className="space-y-6">
+            {/* Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <StatsCard title="Total Outstanding" value={formatINR(totalOutstanding)} icon={TrendingDown} iconColor="text-red-400" />
+              <StatsCard title="Monthly EMI" value={totalEmi > 0 ? formatINR(totalEmi) : "—"} icon={Wallet} iconColor="text-amber-400" />
+              <StatsCard title="Active Liabilities" value={String(activeLiabilities.length)} icon={BarChart3}
+                iconColor="text-muted-foreground" />
+            </div>
+
+            {/* Add liability form */}
+            <div className="glass rounded-xl p-5 space-y-3">
+              <h3 className="text-sm font-semibold">Add liability</h3>
+              <div className="flex gap-2 flex-wrap">
+                <Select value={liabType} onValueChange={setLiabType}>
+                  <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {LIABILITY_ACCOUNT_TYPES.map(t => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input placeholder="Name e.g. SBI Home Loan" value={liabName} onChange={e => setLiabName(e.target.value)} className="flex-1 min-w-40" />
+                <Input placeholder="Outstanding balance (₹)" type="number" value={liabBalance} onChange={e => setLiabBalance(e.target.value)} className="w-44" />
+                <Input placeholder="Lender / institution" value={liabInstitution} onChange={e => setLiabInstitution(e.target.value)} className="flex-1 min-w-32" />
+                <Input placeholder="Interest rate %" type="number" step="0.01" value={liabInterestRate} onChange={e => setLiabInterestRate(e.target.value)} className="w-36" />
+                <Input placeholder="EMI (₹/month)" type="number" value={liabEmi} onChange={e => setLiabEmi(e.target.value)} className="w-36" />
+                {liabType !== "credit_card" ? (
+                  <>
+                    <Input placeholder="Original principal (₹)" type="number" value={liabOriginalPrincipal} onChange={e => setLiabOriginalPrincipal(e.target.value)} className="w-44" />
+                    <Input placeholder="Tenure (months)" type="number" value={liabTenure} onChange={e => setLiabTenure(e.target.value)} className="w-36" />
+                  </>
+                ) : (
+                  <Input placeholder="Credit limit (₹)" type="number" value={liabCreditLimit} onChange={e => setLiabCreditLimit(e.target.value)} className="w-36" />
+                )}
+                <Button size="sm" onClick={addLiability} disabled={addingLiab || !liabName.trim() || !liabBalance}>
+                  <Plus className="w-4 h-4" /> Add
+                </Button>
+              </div>
+            </div>
+
+            {/* Show archived toggle */}
+            {archivedLiabilities.length > 0 && (
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => setShowArchived(v => !v)}>
+                  {showArchived ? "Hide paid off" : `Show paid off (${archivedLiabilities.length})`}
+                </Button>
+              </div>
+            )}
+
+            {/* Liability list */}
+            <div className="space-y-4">
+              {displayedLiabilities.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <TrendingDown className="w-8 h-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No liabilities yet. Add a loan or credit card above.</p>
+                </div>
+              ) : displayedLiabilities.map(acc => {
+                const meta = liabilityMeta(acc.type);
+                const LiabIcon = meta.Icon;
+                const isCreditCard = acc.type === "credit_card";
+                const interestPct = acc.interestRateBps != null ? (acc.interestRateBps / 100).toFixed(2) : null;
+
+                // Repayment progress: only for loans with original principal
+                let repayPct: number | null = null;
+                if (!isCreditCard && acc.originalPrincipalPaise && acc.originalPrincipalPaise > 0) {
+                  const paid = acc.originalPrincipalPaise - acc.balancePaise;
+                  repayPct = Math.min(100, Math.max(0, Math.round((paid / acc.originalPrincipalPaise) * 100)));
+                }
+
+                // Credit utilisation for credit cards
+                let utilPct: number | null = null;
+                if (isCreditCard && acc.creditLimitPaise && acc.creditLimitPaise > 0) {
+                  utilPct = Math.min(100, Math.round((acc.balancePaise / acc.creditLimitPaise) * 100));
+                }
+
+                return (
+                  <div key={acc.id} className={`glass rounded-xl p-5 space-y-3 group ${acc.isArchived ? "opacity-60" : ""}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <LiabIcon className="w-4 h-4 text-red-400 shrink-0" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-semibold truncate">{acc.name}</h4>
+                            {acc.isArchived && <Badge className="text-[10px] bg-emerald-500/10 text-emerald-400 shrink-0">Paid off</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {acc.institution ? `${acc.institution} · ` : ""}{meta.label}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!acc.isArchived && (
+                          <>
+                            <Button variant="ghost" size="icon" className="w-7 h-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => { setEditingLiab(acc.id); setEditLiabBalance(String(acc.balancePaise / 100)); }}>
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="w-7 h-7 text-muted-foreground hover:text-emerald-400"
+                              onClick={() => markPaidOff(acc.id)} title="Mark as paid off">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </>
+                        )}
+                        {acc.isArchived && (
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground"
+                            onClick={() => restoreLiability(acc.id)}>
+                            Restore
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="w-7 h-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                          onClick={() => deleteAccount(acc.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Outstanding balance + inline edit */}
+                    {editingLiab === acc.id ? (
+                      <div className="flex gap-2 items-center">
+                        <Input placeholder="Outstanding (₹)" type="number" value={editLiabBalance}
+                          onChange={e => setEditLiabBalance(e.target.value)} className="h-8 text-xs w-40" />
+                        <Button size="sm" className="h-8 text-xs" onClick={() => updateLiabilityBalance(acc.id)}>Save</Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingLiab(null); setEditLiabBalance(""); }}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-xl font-bold text-red-400">{formatINR(acc.balancePaise)}</span>
+                        <span className="text-xs text-muted-foreground">outstanding</span>
+                        {isCreditCard && acc.creditLimitPaise && (
+                          <span className="text-xs text-muted-foreground">of {formatINR(acc.creditLimitPaise)} limit</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Interest + EMI line */}
+                    {(interestPct ?? acc.emiPaise) && (
+                      <div className="flex gap-4 text-xs text-muted-foreground">
+                        {interestPct && <span>{interestPct}% p.a.</span>}
+                        {acc.emiPaise ? <span>EMI {formatINR(acc.emiPaise)}/mo</span> : null}
+                        {acc.tenureMonths && !isCreditCard ? <span>{acc.tenureMonths} months tenure</span> : null}
+                      </div>
+                    )}
+
+                    {/* Repayment progress bar for fixed-tenure loans */}
+                    {repayPct !== null && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[11px] text-muted-foreground">
+                          <span>{repayPct}% repaid</span>
+                          <span>{formatINR(acc.originalPrincipalPaise! - acc.balancePaise)} paid of {formatINR(acc.originalPrincipalPaise!)}</span>
+                        </div>
+                        <Progress value={repayPct} className="h-1.5" />
+                      </div>
+                    )}
+
+                    {/* Credit utilisation for credit cards */}
+                    {utilPct !== null && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[11px] text-muted-foreground">
+                          <span>{utilPct}% utilised</span>
+                          <span>{formatINR(acc.creditLimitPaise! - acc.balancePaise)} available</span>
+                        </div>
+                        <Progress value={utilPct} className={`h-1.5 ${utilPct > 80 ? "[&>div]:bg-red-400" : "[&>div]:bg-amber-400"}`} />
+                      </div>
                     )}
                   </div>
                 );
