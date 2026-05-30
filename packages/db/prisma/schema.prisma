@@ -19,13 +19,17 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  habits       Habit[]
-  habitLogs    HabitLog[]
-  goals        Goal[]
-  skills       Skill[]
-  journals     JournalEntry[]
-  reminders    Reminder[]
-  aiBriefings  AiBriefing[]
+  habits          Habit[]
+  habitLogs       HabitLog[]
+  goals           Goal[]
+  skills          Skill[]
+  journals        JournalEntry[]
+  reminders       Reminder[]
+  aiBriefings     AiBriefing[]
+  wealthAccounts  WealthAccount[]
+  transactions    Transaction[]
+  investments     Investment[]
+  savingsGoals    SavingsGoal[]
 
   @@map("users")
 }
@@ -160,6 +164,77 @@ model Reminder {
 
   @@index([userId, status, scheduledAt])
   @@map("reminders")
+}
+
+// ─── WEALTH ──────────────────────────────────────────────────────────────────
+
+model WealthAccount {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  type         String
+  balancePaise Int      @default(0)
+  institution  String?
+  isLiability  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("wealth_accounts")
+}
+
+model Transaction {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     WealthAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type        String
+  amountPaise Int
+  category    String
+  date        DateTime
+  note        String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId, date])
+  @@index([accountId])
+  @@map("transactions")
+}
+
+model Investment {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  investmentType    String
+  units             Float    @default(1)
+  buyPricePaise     Int
+  currentPricePaise Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@map("investments")
+}
+
+model SavingsGoal {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  targetPaise     Int
+  currentPaise    Int       @default(0)
+  targetDate      DateTime?
+  linkedAccountId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("savings_goals")
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────────────

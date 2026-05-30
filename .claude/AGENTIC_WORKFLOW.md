@@ -47,6 +47,49 @@ Each agent runs as a Claude Code subagent (via the `Agent` tool) and writes its 
 
 ---
 
+## Model Strategy
+
+Each agent is assigned the cheapest model that can reliably handle its task. Expensive models (Opus) are reserved for steps that require deep reasoning; fast/cheap models (Haiku) handle mechanical execution.
+
+| Agent | Model | Reason |
+|-------|-------|--------|
+| PM Agent | `claude-sonnet-4-6` | Structured interview + PRD writing — balanced capability |
+| Planner Agent | `claude-opus-4-8` | Codebase-wide reasoning, architectural thinking — highest quality needed |
+| Dev Agent | `claude-sonnet-4-6` | TypeScript implementation — Sonnet handles code very well at lower cost |
+| Test Agent | `claude-sonnet-4-6` | Test writing follows clear patterns — Sonnet is sufficient |
+| Review Agent | `claude-opus-4-8` | Multi-angle security/architecture analysis — deep reasoning required |
+| PR Agent | `claude-haiku-4-5-20251001` | Pure CLI execution (tsc, git push, gh pr create) — minimal reasoning |
+
+---
+
+## Handoff Protocol
+
+Every agent **must** write `.claude/workflow/<run-id>/handoff.json` as its final action. The orchestrator reads this to decide whether to proceed and which agent to spawn next.
+
+```json
+{
+  "agent": "pm",
+  "status": "done",
+  "run_id": "20260529-1430",
+  "ticket": "SB-42",
+  "branch": null,
+  "next_agent": "planner",
+  "summary": "PRD written. Jira ticket SB-42 created."
+}
+```
+
+| Field | Values | Notes |
+|-------|--------|-------|
+| `agent` | `pm` \| `planner` \| `dev` \| `tester` \| `reviewer` \| `pr` | Who wrote this |
+| `status` | `done` \| `failed` \| `needs_human` | `needs_human` = blocked, requires input |
+| `next_agent` | next agent name or `null` | `null` only for the PR Agent |
+| `branch` | branch name or `null` | Set by Dev Agent, carried forward by Tester/Reviewer/PR |
+| `summary` | one-sentence result | Shown to the human at the approval gate |
+
+The orchestrator will **not** proceed if `status` is anything other than `done`.
+
+---
+
 ## Prerequisites
 
 ### 1. Install `gh` CLI
@@ -82,9 +125,10 @@ node --version
 ---
 
 ## Agent Definitions
-
+         
 ### Agent 1 — PM Agent (`pm`)
 
+**Model:** `claude-sonnet-4-6`
 **Role:** Product Manager. Conducts a structured interview, writes a Product Requirement Document (PRD), and creates a Jira issue.
 
 **Input:** Free-text description of the feature/bug from the user.
@@ -137,6 +181,7 @@ Why this matters and who is affected.
 **Prompt to spawn this agent:**
 ```
 You are the PM Agent for the SecondBrain project.
+Model: claude-sonnet-4-6
 Your job is to:
 1. Ask the user the 7 interview questions listed in AGENTIC_WORKFLOW.md one at a time.
 2. After gathering answers, write a PRD following the template and save it to
@@ -144,7 +189,11 @@ Your job is to:
 3. Create a Jira issue using the REST API (credentials in .env.local).
    Issue type: "Story" for features, "Bug" for bugs, "Task" for small tasks.
    Save the created issue JSON to .claude/workflow/<run-id>/jira-ticket.json.
-4. Print the Jira ticket URL and key (e.g. SB-42) when done.
+4. Write .claude/workflow/<run-id>/handoff.json:
+   { "agent": "pm", "status": "done", "run_id": "<run-id>", "ticket": "<SB-n>",
+     "branch": null, "next_agent": "planner",
+     "summary": "PRD written. Jira ticket <SB-n> created." }
+5. Print the Jira ticket URL and key (e.g. SB-42) when done.
 
 Feature description from user: "<paste user description here>"
 Run ID: <timestamp e.g. 20260529-1430>
@@ -154,6 +203,7 @@ Run ID: <timestamp e.g. 20260529-1430>
 
 ### Agent 2 — Planner Agent (`planner`)
 
+**Model:** `claude-opus-4-8`
 **Role:** Tech Lead. Reads the PRD and Jira ticket, explores the codebase, and produces a detailed implementation plan.
 
 **Input:** Jira ticket key (e.g. `SB-42`) and the PRD file path.
@@ -193,18 +243,25 @@ XS / S / M / L / XL
 **Prompt to spawn this agent:**
 ```
 You are the Planner Agent for the SecondBrain project.
+Model: claude-opus-4-8
 Read KNOWLEDGE.md and AGENTIC_WORKFLOW.md in .claude/ to understand the architecture.
 Read the PRD at .claude/workflow/<run-id>/prd.md.
+Read .claude/workflow/<run-id>/handoff.json to get the ticket key.
 Fetch the Jira ticket SB-<n> from Jira (credentials in .env.local) for context.
 Explore the codebase to identify exactly which files need to change.
 Write a detailed implementation plan to .claude/workflow/<run-id>/plan.md.
 Do NOT write any code yet.
+Finally, write .claude/workflow/<run-id>/handoff.json:
+  { "agent": "planner", "status": "done", "run_id": "<run-id>", "ticket": "<SB-n>",
+    "branch": null, "next_agent": "dev",
+    "summary": "Plan written. <N> implementation steps across <M> files." }
 ```
 
 ---
 
 ### Agent 3 — Dev Agent (`dev`)
 
+**Model:** `claude-sonnet-4-6`
 **Role:** Senior Developer. Implements the changes described in the plan exactly.
 
 **Input:** `.claude/workflow/<run-id>/plan.md`
@@ -224,7 +281,9 @@ Do NOT write any code yet.
 **Prompt to spawn this agent:**
 ```
 You are the Dev Agent for the SecondBrain project.
+Model: claude-sonnet-4-6
 Read KNOWLEDGE.md and AGENTIC_WORKFLOW.md in .claude/ to understand the codebase.
+Read .claude/workflow/<run-id>/handoff.json to confirm the ticket key.
 Read the implementation plan at .claude/workflow/<run-id>/plan.md.
 Create a feature branch: git checkout -b feature/SB-<n>-<slug>
 Implement every step in the plan. After all changes:
@@ -234,12 +293,17 @@ Implement every step in the plan. After all changes:
 Write a brief dev-notes.md to .claude/workflow/<run-id>/dev-notes.md summarising
 any decisions you made that differ from the plan.
 Do NOT push to remote yet.
+Finally, write .claude/workflow/<run-id>/handoff.json:
+  { "agent": "dev", "status": "done", "run_id": "<run-id>", "ticket": "<SB-n>",
+    "branch": "feature/SB-<n>-<slug>", "next_agent": "tester",
+    "summary": "Implementation complete. Typecheck passes. <N> commits on branch." }
 ```
 
 ---
 
 ### Agent 4 — Test Agent (`tester`)
 
+**Model:** `claude-sonnet-4-6`
 **Role:** QA Engineer. Writes tests for every changed public function and API route.
 
 **Input:** `plan.md` + the actual diff on the feature branch.
@@ -260,7 +324,9 @@ Do NOT push to remote yet.
 **Prompt to spawn this agent:**
 ```
 You are the Test Agent for the SecondBrain project.
+Model: claude-sonnet-4-6
 Read KNOWLEDGE.md and AGENTIC_WORKFLOW.md in .claude/.
+Read .claude/workflow/<run-id>/handoff.json to get the branch name.
 Checkout branch feature/SB-<n>-<slug> and run: git diff main --name-only
 For every changed file that contains public functions or API routes, write tests.
 Use the project's existing test setup. If no test framework is configured yet,
@@ -268,12 +334,17 @@ install vitest + @testing-library/react and configure it minimally in apps/web.
 Commit test files to the same branch.
 Write .claude/workflow/<run-id>/test-report.md listing: what was tested, coverage
 estimate, and anything deliberately excluded (with reason).
+Finally, write .claude/workflow/<run-id>/handoff.json:
+  { "agent": "tester", "status": "done", "run_id": "<run-id>", "ticket": "<SB-n>",
+    "branch": "feature/SB-<n>-<slug>", "next_agent": "reviewer",
+    "summary": "Tests written. <N> test files, ~<M>% coverage of changed code." }
 ```
 
 ---
 
 ### Agent 5 — Review Agent (`reviewer`)
 
+**Model:** `claude-opus-4-8`
 **Role:** Engineering lead who orchestrates three specialised reviewer sub-roles, collects their findings, deduplicates, and produces a final review with items marked as `MUST FIX` / `SHOULD FIX` / `SUGGESTION`.
 
 **Input:** The feature branch diff + plan + dev notes.
@@ -329,7 +400,9 @@ Branch: feature/SB-<n>-<slug>
 **Prompt to spawn this agent:**
 ```
 You are the Review Agent for the SecondBrain project.
+Model: claude-opus-4-8
 Read KNOWLEDGE.md and AGENTIC_WORKFLOW.md in .claude/.
+Read .claude/workflow/<run-id>/handoff.json to get the branch name.
 Checkout branch feature/SB-<n>-<slug> and review the full diff against master.
 Apply three reviewer perspectives in sequence:
   1. Architect — architecture consistency
@@ -339,12 +412,17 @@ Produce .claude/workflow/<run-id>/review.md using the format in AGENTIC_WORKFLOW
 Mark each finding as MUST FIX / SHOULD FIX / SUGGESTION.
 After writing the review, fix every MUST FIX item yourself and commit to the branch.
 Leave SHOULD FIX and SUGGESTION items in the review file for the human to decide.
+Finally, write .claude/workflow/<run-id>/handoff.json:
+  { "agent": "reviewer", "status": "done", "run_id": "<run-id>", "ticket": "<SB-n>",
+    "branch": "feature/SB-<n>-<slug>", "next_agent": "pr",
+    "summary": "<N> MUST FIX resolved. <M> SHOULD FIX left for human review." }
 ```
 
 ---
 
 ### Agent 6 — PR Agent (`pr`)
 
+**Model:** `claude-haiku-4-5-20251001`
 **Role:** Creates the final PR on GitHub after all must-fix items are resolved.
 
 **Input:** branch name, review.md, dev-notes.md, Jira ticket key.
@@ -383,27 +461,49 @@ https://$JIRA_BASE_URL/browse/SB-<n>
 **Prompt to spawn this agent:**
 ```
 You are the PR Agent for the SecondBrain project.
-Branch: feature/SB-<n>-<slug>
-Jira ticket: SB-<n>
+Model: claude-haiku-4-5-20251001
+Read .claude/workflow/<run-id>/handoff.json to get branch name and ticket key.
 Review file: .claude/workflow/<run-id>/review.md
 
-1. Run: cd apps/web && npx tsc --noEmit — abort if it fails.
+1. Run: cd apps/web && npx tsc --noEmit — abort and set status "failed" if it fails.
 2. Check: git status — abort if uncommitted changes exist.
 3. Push branch: git push -u origin feature/SB-<n>-<slug>
 4. Create PR using `gh pr create` with the template from AGENTIC_WORKFLOW.md.
    Base branch: master. Include the Jira link and SHOULD FIX items in the body.
-5. Print the PR URL.
+5. Write .claude/workflow/<run-id>/handoff.json:
+   { "agent": "pr", "status": "done", "run_id": "<run-id>", "ticket": "<SB-n>",
+     "branch": "feature/SB-<n>-<slug>", "next_agent": null,
+     "summary": "PR opened: <PR URL>" }
+6. Print the PR URL.
 ```
 
 ---
 
 ## Orchestrator — Running the Full Pipeline
 
-The orchestrator is the main Claude Code session. It spawns agents in sequence and shows you approval gates.
+The orchestrator is the main Claude Code session. It spawns agents in sequence using the model specified in each agent's definition, reads `handoff.json` after each agent completes, and pauses for your approval before proceeding.
+
+### Orchestrator loop (pseudo-code)
+
+```
+run_id = timestamp()
+next_agent = "pm"
+
+while next_agent is not null:
+  1. Read .claude/workflow/<run-id>/handoff.json (if exists)
+  2. Spawn Agent(model=<agent.model>, prompt=<agent.prompt>)
+  3. Agent completes → writes handoff.json
+  4. Read handoff.json:
+       if status == "failed"  → stop, report error
+       if status == "needs_human" → pause, ask user, resume
+       if status == "done"    → show summary to user
+  5. PAUSE — ask user: Approve / Edit / Abort
+  6. next_agent = handoff.json["next_agent"]
+```
 
 ### Manual invocation (per agent)
 
-Paste the relevant prompt block from above into a Claude Code session, substituting `<run-id>` and `<n>`.
+Paste the relevant prompt block from above into a Claude Code session, substituting `<run-id>` and `<n>`. The model is specified in the prompt; set it via the `model:` parameter of the Agent tool.
 
 ### Semi-automated invocation via `/run-workflow`
 
@@ -414,16 +514,16 @@ You can invoke the whole pipeline from a single Claude Code message:
 ```
 
 This triggers the orchestrator to:
-1. Spawn PM Agent → wait for Jira ticket key → **pause for your approval**
-2. Spawn Planner Agent → wait for plan.md → **pause for your approval**
-3. Spawn Dev Agent → wait for typecheck pass → **pause for your approval**
-4. Spawn Test Agent → wait for test-report.md → **pause for your approval**
-5. Spawn Review Agent → auto-fixes MUST FIX items → **pause for your approval**
-6. Spawn PR Agent → open PR → prints URL
+1. Spawn PM Agent (`sonnet`) → writes handoff.json → **pause for your approval**
+2. Spawn Planner Agent (`opus`) → writes handoff.json → **pause for your approval**
+3. Spawn Dev Agent (`sonnet`) → writes handoff.json → **pause for your approval**
+4. Spawn Test Agent (`sonnet`) → writes handoff.json → **pause for your approval**
+5. Spawn Review Agent (`opus`) → auto-fixes MUST FIX, writes handoff.json → **pause for your approval**
+6. Spawn PR Agent (`haiku`) → opens PR, writes handoff.json (next=null) → prints URL
 
 At each gate you can:
-- **Approve** → continue to next agent
-- **Edit** → modify the output file (plan.md, etc.) before continuing
+- **Approve** → orchestrator reads `next_agent` from handoff.json and spawns next
+- **Edit** → modify the output file (plan.md, etc.) before approving
 - **Abort** → stop the pipeline
 
 ---
@@ -434,6 +534,7 @@ At each gate you can:
 .claude/
 └── workflow/
     └── 20260529-1430/          ← run-id = timestamp
+        ├── handoff.json        ← written by each agent; orchestrator reads to chain
         ├── prd.md              ← PM Agent output
         ├── jira-ticket.json    ← Jira API response
         ├── plan.md             ← Planner Agent output
@@ -446,14 +547,16 @@ At each gate you can:
 
 ## Quick Reference — Agent Spawn Commands
 
-| Stage | Agent type | Key output |
-|-------|-----------|------------|
-| 1. Requirements | `pm` | `prd.md` + Jira ticket |
-| 2. Planning | `planner` | `plan.md` |
-| 3. Implementation | `dev` | feature branch commits |
-| 4. Testing | `tester` | test files + `test-report.md` |
-| 5. Code review | `reviewer` | `review.md` + MUST FIX commits |
-| 6. Pull request | `pr` | GitHub PR URL |
+| Stage | Agent | Model | Key output |
+|-------|-------|-------|------------|
+| 1. Requirements | `pm` | `claude-sonnet-4-6` | `prd.md` + Jira ticket |
+| 2. Planning | `planner` | `claude-opus-4-8` | `plan.md` |
+| 3. Implementation | `dev` | `claude-sonnet-4-6` | feature branch commits |
+| 4. Testing | `tester` | `claude-sonnet-4-6` | test files + `test-report.md` |
+| 5. Code review | `reviewer` | `claude-opus-4-8` | `review.md` + MUST FIX commits |
+| 6. Pull request | `pr` | `claude-haiku-4-5-20251001` | GitHub PR URL |
+
+Every agent also writes `handoff.json` — the orchestrator reads it to chain to the next agent.
 
 ---
 

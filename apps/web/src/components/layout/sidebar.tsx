@@ -41,7 +41,6 @@ const navItems = [
     href: "/wealth",
     icon: Wallet,
     color: "text-amber-400",
-    comingSoon: true,
   },
   {
     label: "Knowledge",
@@ -102,7 +101,7 @@ export function Sidebar() {
 
           return (
             <div key={item.href}>
-              {item.comingSoon ? (
+              {(item as { comingSoon?: boolean }).comingSoon ? (
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-40 cursor-not-allowed">
                   <Icon className={cn("w-4 h-4", item.color)} />
                   <span className="text-sm text-foreground flex-1">{item.label}</span>

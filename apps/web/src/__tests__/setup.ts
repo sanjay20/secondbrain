@@ -23,5 +23,33 @@ vi.mock("@/lib/db", () => ({
     journalEntry: { findFirst: vi.fn(), findMany: vi.fn() },
     reminder: { upsert: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), delete: vi.fn() },
     user: { update: vi.fn() },
+    wealthAccount: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    transaction: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      createMany: vi.fn(),
+      delete: vi.fn(),
+    },
+    investment: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+    },
+    savingsGoal: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    $transaction: vi.fn(),
   },
 }));

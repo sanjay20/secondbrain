@@ -129,6 +129,66 @@ export type JournalCategory =
   | "finance"
   | "other";
 
+// ─── Wealth types ─────────────────────────────────────────────────────────────
+
+export interface WealthAccount {
+  id: string;
+  userId: string;
+  name: string;
+  type: string;
+  balancePaise: number;
+  institution?: string | null;
+  isLiability: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  accountId: string;
+  type: string;
+  amountPaise: number;
+  category: string;
+  date: Date;
+  note?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  account?: WealthAccount;
+}
+
+export interface Investment {
+  id: string;
+  userId: string;
+  name: string;
+  investmentType: string;
+  units: number;
+  buyPricePaise: number;
+  currentPricePaise: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SavingsGoal {
+  id: string;
+  userId: string;
+  title: string;
+  targetPaise: number;
+  currentPaise: number;
+  targetDate?: Date | null;
+  linkedAccountId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type AccountType = "bank" | "investment" | "property" | "vehicle" | "cash" | "loan" | "credit_card" | "other";
+export type TransactionType = "income" | "expense" | "transfer";
+export type InvestmentType = "mutual_fund" | "stock" | "fd" | "ppf" | "gold" | "crypto" | "other";
+
+export const formatINR = (paise: number): string =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })
+    .format(paise / 100);
+
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {
