@@ -21,7 +21,8 @@ export type AIFeature =
   | "knowledgeInsight"
   | "journalInsight"
   | "wealthInsight"
-  | "dayplan";
+  | "dayplan"
+  | "visionInsight";
 
 /**
  * Per-feature settings. Each feature lists the model to use for every provider
@@ -45,6 +46,7 @@ const FEATURES: Record<
   journalInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
   wealthInsight:  { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1000 },
   dayplan:        { anthropic: MODELS.fast,  gemini: GEMINI_MODELS.fast,  groq: GROQ_MODELS.fast,  maxTokens: 600 },
+  visionInsight:  { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 600 },
 };
 
 /** Resolve the provider + model + token budget for a feature. */
