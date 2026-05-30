@@ -73,6 +73,13 @@ vi.mock("@/lib/db", () => ({
     habitLog: { findMany: vi.fn() },
     goal: { findMany: vi.fn() },
     calendarConnection: { findUnique: vi.fn() },
+    visionArea: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
