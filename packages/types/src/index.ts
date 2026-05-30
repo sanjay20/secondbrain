@@ -313,6 +313,20 @@ export interface MonthlyGoal {
   updatedAt: Date;
 }
 
+export const BUCKET_LIST_CATEGORIES = ["travel", "experience", "achievement"] as const;
+export type BucketListCategory = (typeof BUCKET_LIST_CATEGORIES)[number];
+
+export interface BucketListItem {
+  id: string;
+  userId: string;
+  title: string;
+  category: string;
+  notes?: string | null;
+  completedAt?: Date | string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {
