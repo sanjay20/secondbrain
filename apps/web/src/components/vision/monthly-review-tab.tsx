@@ -39,14 +39,14 @@ export function MonthlyReviewTab() {
 
   const fetchGoals = useCallback(async () => {
     try {
-      const res = await fetch("/api/vision/five-year-goals");
+      const res = await fetch(`/api/vision/five-year-goals?month=${currentMonth}`);
       setGoals((await res.json()) as FiveYearGoal[]);
     } catch {
       toast.error("Failed to load goals");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentMonth]);
 
   useEffect(() => {
     fetchGoals();

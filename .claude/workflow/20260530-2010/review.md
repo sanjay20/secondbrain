@@ -27,23 +27,22 @@ DB → type → agent → API → page → sidebar pattern with no superfluous a
 ---
 
 ### SHOULD FIX
-- [ ] [Perf] `apps/web/src/app/api/vision/five-year-goals/route.ts:18` and
-  `apps/web/src/app/api/vision/monthly-goals/route.ts:20` — list queries have no `take`
-  limit. Consistent with the existing codebase (vision, wealth/goals also omit `take`), so
-  not a regression, but the `monthlyGoals` include on the five-year-goals GET means the
-  Monthly Review tab pulls every monthly goal for all time on each load. Consider a `take`
-  cap (e.g. 100 goals) and/or a server-side current-month filter for the review path.
-- [ ] [UX] `apps/web/src/components/vision/five-year-goals-tab.tsx` and
-  `monthly-review-tab.tsx` fetch `/api/vision/five-year-goals` independently with separate
-  local state. Edits made in one tab (e.g. ticking a monthly goal done in Review) are not
-  reflected in the other tab until remount. Acceptable for now (tabs unmount/remount on
-  switch via the Tabs primitive), but a shared fetch/SWR cache would remove the staleness
-  window.
-- [ ] [UX] `monthly-goal-form.tsx:111` — Status `Select` in edit mode uses `defaultValue`
-  + `setValue` but the field is `.optional()` and never `register`ed, so an unchanged
-  status is omitted from a PATCH (harmless — server leaves it). For create it defaults to
-  `todo`. Works, but consider registering the field for clarity/consistency with the rest
-  of the form.
+- [x] [Perf] **RESOLVED.** `five-year-goals/route.ts` GET now accepts an optional
+  `?month=YYYY-MM`, adds `take: 100` on the outer query and `orderBy` + `take: 200` on the
+  `monthlyGoals` include (filtered by `month` when present). `MonthlyReviewTab` now fetches
+  `?month=${currentMonth}`, so it no longer pulls every monthly goal for all time.
+  `monthly-goals/route.ts` GET gained `take: 200`. New tests cover the take limits and the
+  month filter.
+- [x] [UX] **RESOLVED BY ANALYSIS — no change.** `components/ui/tabs.tsx` uses radix
+  `TabsPrimitive.Content` without `forceMount`, so inactive tabs unmount and refetch on every
+  switch — there is no staleness window in practice (each switch yields a fresh fetch).
+  A shared SWR cache would be over-engineering and conflicts with the now-divergent per-tab
+  query shapes from the Perf fix above.
+- [x] [UX] **NO CHANGE — already consistent.** The Status `Select` uses the same
+  `defaultValue` + `setValue` pattern as the sibling `five-year-goal-form.tsx` pillar Select,
+  and `status` is present in `defaultValues` (`"todo"` on create, `goal.status` on edit), so
+  it is included in the submitted payload. Switching to `Controller` would make it
+  *inconsistent* with the sibling form.
 
 ### SUGGESTIONS
 - [ ] [UX] `monthly-goals-list.tsx:71` uses a raw "✏" emoji as the edit-button glyph while

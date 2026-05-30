@@ -15,6 +15,9 @@ const db = prisma as unknown as {
 const makeReq = (body: unknown) =>
   ({ json: async () => body } as unknown as Request);
 
+const makeGetReq = (url = "http://localhost/api/vision/five-year-goals") =>
+  ({ url } as unknown as Request);
+
 const sampleGoal = {
   id: "fyg-1",
   userId: "user-1",
@@ -37,7 +40,7 @@ describe("GET /api/vision/five-year-goals", () => {
 
   it("returns five-year goals for the authenticated user", async () => {
     db.fiveYearGoal.findMany.mockResolvedValue([sampleGoal]);
-    const res = await GET();
+    const res = await GET(makeGetReq());
     expect(res.status).toBe(200);
     expect(db.fiveYearGoal.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { userId: "user-1" } })
@@ -46,7 +49,7 @@ describe("GET /api/vision/five-year-goals", () => {
 
   it("returns an empty array when the user has no goals", async () => {
     db.fiveYearGoal.findMany.mockResolvedValue([]);
-    const res = await GET();
+    const res = await GET(makeGetReq());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual([]);
@@ -54,18 +57,32 @@ describe("GET /api/vision/five-year-goals", () => {
 
   it("orders goals by createdAt descending", async () => {
     db.fiveYearGoal.findMany.mockResolvedValue([sampleGoal]);
-    await GET();
+    await GET(makeGetReq());
     expect(db.fiveYearGoal.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: { createdAt: "desc" } })
     );
   });
 
-  it("includes monthlyGoals in the response", async () => {
+  it("includes monthlyGoals (bounded) without a month filter by default", async () => {
     db.fiveYearGoal.findMany.mockResolvedValue([sampleGoal]);
-    await GET();
-    expect(db.fiveYearGoal.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ include: { monthlyGoals: true } })
-    );
+    await GET(makeGetReq());
+    const call = db.fiveYearGoal.findMany.mock.calls[0][0];
+    expect(call.include.monthlyGoals.take).toBe(200);
+    expect(call.include.monthlyGoals.where).toBeUndefined();
+  });
+
+  it("caps the number of goals returned with a take limit", async () => {
+    db.fiveYearGoal.findMany.mockResolvedValue([sampleGoal]);
+    await GET(makeGetReq());
+    const call = db.fiveYearGoal.findMany.mock.calls[0][0];
+    expect(call.take).toBe(100);
+  });
+
+  it("filters the monthlyGoals include by month when ?month= is provided", async () => {
+    db.fiveYearGoal.findMany.mockResolvedValue([sampleGoal]);
+    await GET(makeGetReq("http://localhost/api/vision/five-year-goals?month=2026-05"));
+    const call = db.fiveYearGoal.findMany.mock.calls[0][0];
+    expect(call.include.monthlyGoals.where).toEqual({ month: "2026-05" });
   });
 
   it("returns multiple goals", async () => {
@@ -74,7 +91,7 @@ describe("GET /api/vision/five-year-goals", () => {
       { ...sampleGoal, id: "fyg-2", pillar: "health", goal: "Run a marathon" },
     ];
     db.fiveYearGoal.findMany.mockResolvedValue(goals);
-    const res = await GET();
+    const res = await GET(makeGetReq());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveLength(2);

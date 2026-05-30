@@ -24,6 +24,7 @@ export async function GET(req: Request) {
       ...(month ? { month } : {}),
     },
     orderBy: [{ month: "desc" }, { createdAt: "desc" }],
+    take: 200,
   });
 
   return NextResponse.json(goals);

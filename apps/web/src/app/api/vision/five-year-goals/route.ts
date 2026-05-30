@@ -12,13 +12,22 @@ const createSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await requireUser();
+  const { searchParams } = new URL(req.url);
+  const month = searchParams.get("month");
 
   const goals = await prisma.fiveYearGoal.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
-    include: { monthlyGoals: true },
+    take: 100,
+    include: {
+      monthlyGoals: {
+        ...(month ? { where: { month } } : {}),
+        orderBy: [{ month: "desc" }, { createdAt: "desc" }],
+        take: 200,
+      },
+    },
   });
 
   return NextResponse.json(goals);
