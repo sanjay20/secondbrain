@@ -16,20 +16,25 @@ model User {
   name             String?
   imageUrl         String?
   pushSubscription Json?
+  timezone         String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  habits          Habit[]
-  habitLogs       HabitLog[]
-  goals           Goal[]
-  skills          Skill[]
-  journals        JournalEntry[]
-  reminders       Reminder[]
-  aiBriefings     AiBriefing[]
-  wealthAccounts  WealthAccount[]
-  transactions    Transaction[]
-  investments     Investment[]
-  savingsGoals    SavingsGoal[]
+  habits              Habit[]
+  habitLogs           HabitLog[]
+  goals               Goal[]
+  skills              Skill[]
+  journals            JournalEntry[]
+  reminders           Reminder[]
+  aiBriefings         AiBriefing[]
+  wealthAccounts      WealthAccount[]
+  transactions        Transaction[]
+  investments         Investment[]
+  savingsGoals        SavingsGoal[]
+  tasks               Task[]
+  timeBlocks          TimeBlock[]
+  weeklyReviews       WeeklyReview[]
+  calendarConnection  CalendarConnection?
 
   @@map("users")
 }
@@ -243,6 +248,79 @@ model SavingsGoal {
 
   @@index([userId])
   @@map("savings_goals")
+}
+
+// ─── DAILY WORK ──────────────────────────────────────────────────────────────
+
+model Task {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  notes         String?
+  pillar        String?
+  status        String    @default("todo")
+  priority      String    @default("medium")
+  scheduledDate DateTime
+  originalDate  DateTime?
+  rolledOver    Boolean   @default(false)
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  timeBlocks TimeBlock[]
+
+  @@index([userId, scheduledDate])
+  @@map("tasks")
+}
+
+model TimeBlock {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId        String?
+  task          Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  goalId        String?
+  label         String
+  startTime     DateTime
+  endTime       DateTime
+  googleEventId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, startTime])
+  @@map("time_blocks")
+}
+
+model WeeklyReview {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart DateTime
+  weekEnd   DateTime
+  content   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, weekStart])
+  @@index([userId])
+  @@map("weekly_reviews")
+}
+
+model CalendarConnection {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     String   @default("google")
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  scope        String
+  calendarId   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("calendar_connections")
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
