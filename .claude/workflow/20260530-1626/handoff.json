@@ -1,9 +1,9 @@
 {
-  "agent": "tester",
+  "agent": "reviewer",
   "status": "done",
   "run_id": "20260530-1626",
   "ticket": "SB-36",
   "branch": "feature/SB-36-vision-board",
-  "next_agent": "reviewer",
-  "summary": "Tests written. 4 test files, 217 total tests passing, ~85% coverage of changed code."
+  "next_agent": "pr",
+  "summary": "1 MUST FIX resolved (settings.local.json). 1 SHOULD FIX left for human review."
 }
