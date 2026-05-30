@@ -22,7 +22,7 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     journalEntry: { findFirst: vi.fn(), findMany: vi.fn() },
     reminder: { upsert: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), delete: vi.fn() },
-    user: { update: vi.fn() },
+    user: { update: vi.fn(), findMany: vi.fn() },
     wealthAccount: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
@@ -50,6 +50,39 @@ vi.mock("@/lib/db", () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    task: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    timeBlock: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    weeklyReview: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    },
+    habit: { findMany: vi.fn() },
+    habitLog: { findMany: vi.fn() },
+    goal: { findMany: vi.fn() },
+    calendarConnection: { findUnique: vi.fn() },
     $transaction: vi.fn(),
   },
+}));
+
+// Mock @/lib/google — always no-op in tests
+vi.mock("@/lib/google", () => ({
+  createEvent: vi.fn().mockResolvedValue(undefined),
+  deleteEvent: vi.fn().mockResolvedValue(undefined),
+  getAuthUrl: vi.fn().mockReturnValue("https://accounts.google.com/mock"),
+  exchangeCode: vi.fn().mockResolvedValue({ access_token: "tok", expires_in: 3600, scope: "" }),
+  getValidAccessToken: vi.fn().mockResolvedValue("tok"),
+  listTodayEvents: vi.fn().mockResolvedValue([]),
 }));
