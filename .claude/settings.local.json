@@ -17,7 +17,16 @@
       "Read(//usr/local/bin/**)",
       "Read(//usr/bin/**)",
       "Bash(cat ~/.zshrc 2>/dev/null | head -60)",
-      "Read(//Users/kandoewinpvtltd/**)"
+      "Read(//Users/kandoewinpvtltd/**)",
+      "Bash(git -C /home/sanjay/Desktop/secondbrain show e3e8bfb --stat)",
+      "Bash(git -C /home/sanjay/Desktop/secondbrain log --oneline master)",
+      "Bash(git -C /home/sanjay/Desktop/secondbrain show origin/master:apps/web/src/lib/email.ts)",
+      "Bash(git -C /home/sanjay/Desktop/secondbrain show origin/master:apps/web/src/lib/push.ts)",
+      "Bash(git -C /home/sanjay/Desktop/secondbrain show origin/master:apps/web/public/sw.js)",
+      "Bash(git -C /home/sanjay/Desktop/secondbrain show origin/master:apps/web/src/app/api/push/subscribe/route.ts)",
+      "Bash(git -C /home/sanjay/Desktop/secondbrain show origin/master:apps/web/src/app/api/reminders/route.ts)",
+      "Bash(git -C /home/sanjay/Desktop/secondbrain show origin/master:apps/web/src/app/api/reminders/\\\\[id\\\\]/route.ts)",
+      "Bash(git -C /home/sanjay/Desktop/secondbrain show origin/master:apps/web/src/app/api/reminders/process/route.ts)"
     ]
   }
 }
