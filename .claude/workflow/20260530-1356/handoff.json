@@ -1,9 +1,9 @@
 {
-  "agent": "dev",
+  "agent": "tester",
   "status": "done",
   "run_id": "20260530-1356",
   "ticket": "SB-22",
   "branch": "feature/SB-22-daily-work-pillar",
-  "next_agent": "tester",
-  "summary": "Implementation complete. Typecheck passes. 8 commits on branch."
+  "next_agent": "reviewer",
+  "summary": "Tests written. 6 test files, ~90% coverage of changed API code. 97 new tests, 166 total — all passing."
 }
