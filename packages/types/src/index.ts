@@ -269,6 +269,19 @@ export interface PlannerResult {
   generatedAt: string;
 }
 
+// ─── Vision types ─────────────────────────────────────────────────────────────
+
+export interface VisionArea {
+  id: string;
+  userId: string;
+  name: string;
+  statement: string;
+  emoji: string;
+  color: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {
