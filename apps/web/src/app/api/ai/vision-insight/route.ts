@@ -6,14 +6,30 @@ import { getVisionInsights, aiErrorMessage } from "@secondbrain/ai-core";
 export async function POST() {
   const user = await requireUser();
 
-  const areas = await prisma.visionArea.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
+  const [areas, fiveYearGoals] = await Promise.all([
+    prisma.visionArea.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.fiveYearGoal.findMany({
+      where: { userId: user.id, status: "active" },
+      include: { monthlyGoals: true },
+    }),
+  ]);
+
+  const goalContext = fiveYearGoals.map((g) => ({
+    pillar: g.pillar,
+    goal: g.goal,
+    targetYear: g.targetYear,
+    progress: g.progress,
+    monthlyTotal: g.monthlyGoals.length,
+    monthlyDone: g.monthlyGoals.filter((m) => m.status === "done").length,
+  }));
 
   try {
     const insight = await getVisionInsights({
       areas: areas.map((a) => ({ name: a.name, statement: a.statement })),
+      fiveYearGoals: goalContext,
     });
     return NextResponse.json({ insight });
   } catch (err) {
