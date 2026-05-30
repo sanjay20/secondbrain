@@ -10,3 +10,4 @@ export { getCareerInsights, streamCareerCoach } from "./agents/career-agent";
 export { getKnowledgeRecommendations } from "./agents/knowledge-agent";
 export { getJournalFollowups } from "./agents/journal-agent";
 export { getWealthInsights } from "./agents/wealth-agent";
+export { getDayPlan, getEndOfDaySummary } from "./agents/dayplan-agent";
