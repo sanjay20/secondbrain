@@ -8,6 +8,7 @@ import { VisionCard } from "@/components/vision/vision-card";
 import { VisionForm } from "@/components/vision/vision-form";
 import { FiveYearGoalsTab } from "@/components/vision/five-year-goals-tab";
 import { MonthlyReviewTab } from "@/components/vision/monthly-review-tab";
+import { BucketListTab } from "@/components/vision/bucket-list-tab";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { VisionArea } from "@secondbrain/types";
@@ -75,6 +76,7 @@ export default function VisionPage() {
             <TabsTrigger value="vision-areas">Vision Areas</TabsTrigger>
             <TabsTrigger value="five-year-goals">5-Year Goals</TabsTrigger>
             <TabsTrigger value="monthly-review">Monthly Review</TabsTrigger>
+            <TabsTrigger value="bucket-list">Bucket List</TabsTrigger>
           </TabsList>
 
           <TabsContent value="vision-areas">
@@ -124,6 +126,10 @@ export default function VisionPage() {
 
           <TabsContent value="monthly-review">
             <MonthlyReviewTab />
+          </TabsContent>
+
+          <TabsContent value="bucket-list">
+            <BucketListTab />
           </TabsContent>
         </Tabs>
       </div>
