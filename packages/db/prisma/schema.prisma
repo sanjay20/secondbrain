@@ -39,6 +39,7 @@ model User {
   fiveYearGoals       FiveYearGoal[]
   monthlyGoals        MonthlyGoal[]
   bucketListItems     BucketListItem[]
+  coreValues          CoreValue[]
 
   @@map("users")
 }
@@ -394,6 +395,19 @@ model BucketListItem {
 
   @@index([userId])
   @@map("bucket_list_items")
+}
+
+model CoreValue {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("core_values")
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
