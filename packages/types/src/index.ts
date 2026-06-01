@@ -327,6 +327,17 @@ export interface BucketListItem {
   updatedAt: Date;
 }
 
+export const MAX_CORE_VALUES = 7;
+
+export interface CoreValue {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {

@@ -101,6 +101,14 @@ vi.mock("@/lib/db", () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    coreValue: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
