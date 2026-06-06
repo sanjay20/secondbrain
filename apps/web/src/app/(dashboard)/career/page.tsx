@@ -1,19 +1,26 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Briefcase, Target, CheckCircle2, Sparkles, Plus } from "lucide-react";
+import { Briefcase, Target, CheckCircle2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { useForm } from "react-hook-form";
 import { Header } from "@/components/layout/header";
 import { GoalCard } from "@/components/career/goal-card";
 import { GoalForm } from "@/components/career/goal-form";
-import { SkillBadge } from "@/components/career/skill-badge";
+import { SkillCard } from "@/components/career/skill-card";
+import { SkillForm } from "@/components/career/skill-form";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SKILL_CATEGORIES } from "@secondbrain/types";
 import type { Goal, Skill } from "@secondbrain/types";
+
+const categoryLabels: Record<string, string> = {
+  technical: "Technical",
+  soft: "Soft Skills",
+  language: "Languages",
+  tool: "Tools",
+  domain: "Domain",
+};
 
 export default function CareerPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -21,9 +28,6 @@ export default function CareerPage() {
   const [loading, setLoading] = useState(true);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [newSkillName, setNewSkillName] = useState("");
-  const [newSkillLevel, setNewSkillLevel] = useState("1");
-  const [addingSkill, setAddingSkill] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -55,32 +59,20 @@ export default function CareerPage() {
     }
   }
 
-  async function addSkill() {
-    if (!newSkillName.trim()) return;
-    setAddingSkill(true);
-    try {
-      const res = await fetch("/api/skills", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newSkillName.trim(), level: parseInt(newSkillLevel) }),
-      });
-      if (!res.ok) throw new Error();
-      setNewSkillName("");
-      setNewSkillLevel("1");
-      toast.success("Skill added!");
-      fetchData();
-    } catch {
-      toast.error("Failed to add skill");
-    } finally {
-      setAddingSkill(false);
-    }
-  }
-
   const activeGoals = goals.filter((g) => g.status === "active");
   const completedGoals = goals.filter((g) => g.status === "completed");
   const avgProgress = activeGoals.length
     ? Math.round(activeGoals.reduce((s, g) => s + g.progress, 0) / activeGoals.length)
     : 0;
+
+  const goalOptions = goals.map((g) => ({ id: g.id, title: g.title }));
+
+  const skillsByCategory = SKILL_CATEGORIES.reduce<Record<string, Skill[]>>((acc, cat) => {
+    const group = skills.filter((s) => s.category === cat);
+    if (group.length > 0) acc[cat] = group;
+    return acc;
+  }, {});
+  const uncategorized = skills.filter((s) => !SKILL_CATEGORIES.includes(s.category as typeof SKILL_CATEGORIES[number]));
 
   return (
     <div className="flex flex-col flex-1">
@@ -138,46 +130,53 @@ export default function CareerPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="skills" className="mt-4">
-            <div className="glass rounded-xl p-5 space-y-4">
-              <div className="flex items-center gap-3">
-                <Input
-                  placeholder="Add a skill (e.g. TypeScript)"
-                  value={newSkillName}
-                  onChange={(e) => setNewSkillName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addSkill()}
-                  className="flex-1"
-                />
-                <Select value={newSkillLevel} onValueChange={setNewSkillLevel}>
-                  <SelectTrigger className="w-28">
-                    <SelectValue placeholder="Level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Beginner</SelectItem>
-                    <SelectItem value="2">Basic</SelectItem>
-                    <SelectItem value="3">Intermediate</SelectItem>
-                    <SelectItem value="4">Advanced</SelectItem>
-                    <SelectItem value="5">Expert</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button onClick={addSkill} disabled={addingSkill || !newSkillName.trim()} size="sm">
-                  <Plus className="w-4 h-4" />
-                  Add
-                </Button>
-              </div>
-
-              {skills.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No skills tracked yet. Add your skills above!
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {skills.map((skill) => (
-                    <SkillBadge key={skill.id} skill={skill} onDelete={fetchData} />
-                  ))}
-                </div>
-              )}
+          <TabsContent value="skills" className="mt-4 space-y-6">
+            <div className="glass rounded-xl p-5">
+              <SkillForm onSuccess={fetchData} />
             </div>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => <div key={i} className="h-24 rounded-xl bg-secondary/50 animate-pulse" />)}
+              </div>
+            ) : skills.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-amber-400/10 flex items-center justify-center">
+                  <Sparkles className="w-8 h-8 text-amber-400" />
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold">No skills tracked yet</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Add your first skill above to start tracking your growth</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {SKILL_CATEGORIES.filter((cat) => skillsByCategory[cat]).map((cat) => (
+                  <div key={cat}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                      {categoryLabels[cat] ?? cat}
+                    </h3>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {skillsByCategory[cat].map((skill) => (
+                        <SkillCard key={skill.id} skill={skill} goals={goalOptions} onUpdate={fetchData} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {uncategorized.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                      Other
+                    </h3>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {uncategorized.map((skill) => (
+                        <SkillCard key={skill.id} skill={skill} goals={goalOptions} onUpdate={fetchData} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
