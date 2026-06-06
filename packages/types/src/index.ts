@@ -94,6 +94,7 @@ export interface SkillGoal {
   skillId: string;
   goalId: string;
   createdAt: Date;
+  goal?: { id: string; title: string };
 }
 
 export interface Skill {
