@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -27,7 +27,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json() as unknown;
-  const data = updateSchema.parse(body);
+  let data: z.infer<typeof updateSchema>;
+  try {
+    data = updateSchema.parse(body);
+  } catch (err) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.errors }, { status: 400 });
+    }
+    throw err;
+  }
   const { goalIds, ...scalars } = data;
 
   await prisma.skill.update({

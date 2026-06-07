@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -35,7 +35,15 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const user = await requireUser();
   const body = await req.json() as unknown;
-  const data = createSchema.parse(body);
+  let data: z.infer<typeof createSchema>;
+  try {
+    data = createSchema.parse(body);
+  } catch (err) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.errors }, { status: 400 });
+    }
+    throw err;
+  }
   const { goalIds, ...skillData } = data;
 
   const skill = await prisma.skill.upsert({
