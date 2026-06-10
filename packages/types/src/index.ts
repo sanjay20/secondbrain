@@ -78,6 +78,25 @@ export type KnowledgeCategory =
 
 // ─── Skill types ──────────────────────────────────────────────────────────────
 
+export const SKILL_CATEGORIES = ["technical", "soft", "language", "tool", "domain"] as const;
+export type SkillCategory = (typeof SKILL_CATEGORIES)[number];
+
+export const SKILL_LEVELS: Record<number, string> = {
+  1: "Beginner",
+  2: "Basic",
+  3: "Intermediate",
+  4: "Advanced",
+  5: "Expert",
+};
+
+export interface SkillGoal {
+  id: string;
+  skillId: string;
+  goalId: string;
+  createdAt: Date;
+  goal?: { id: string; title: string };
+}
+
 export interface Skill {
   id: string;
   userId: string;
@@ -88,9 +107,9 @@ export interface Skill {
   description?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  skillGoals?: SkillGoal[];
+  goals?: { id: string; title: string }[];
 }
-
-export type SkillCategory = "technical" | "soft" | "language" | "tool" | "domain";
 
 // ─── Journal types ────────────────────────────────────────────────────────────
 

@@ -105,6 +105,7 @@ model Goal {
   updatedAt   DateTime  @updatedAt
 
   milestones Milestone[]
+  skillGoals SkillGoal[]
 
   @@index([userId])
   @@map("goals")
@@ -136,9 +137,25 @@ model Skill {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  skillGoals SkillGoal[]
+
   @@unique([userId, name])
   @@index([userId])
   @@map("skills")
+}
+
+model SkillGoal {
+  id        String   @id @default(cuid())
+  skillId   String
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  goalId    String
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([skillId, goalId])
+  @@index([skillId])
+  @@index([goalId])
+  @@map("skill_goals")
 }
 
 model JournalEntry {

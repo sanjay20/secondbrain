@@ -72,6 +72,21 @@ vi.mock("@/lib/db", () => ({
     habit: { findMany: vi.fn() },
     habitLog: { findMany: vi.fn() },
     goal: { findMany: vi.fn() },
+    skill: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      upsert: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    skillGoal: {
+      findMany: vi.fn(),
+      createMany: vi.fn(),
+      deleteMany: vi.fn(),
+      delete: vi.fn(),
+    },
     calendarConnection: { findUnique: vi.fn() },
     visionArea: {
       findMany: vi.fn(),
