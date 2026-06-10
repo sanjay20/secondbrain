@@ -34,3 +34,6 @@ coverage
 
 # Vercel
 .vercel
+
+# Claude Code local/personal settings (not shared)
+.claude/settings.local.json
