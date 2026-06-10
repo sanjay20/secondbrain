@@ -1,6 +1,13 @@
 # SecondBrain — Agentic Development Workflow
 
-A multi-agent pipeline that takes a feature idea from raw conversation all the way to a merged GitHub PR, with a human approval gate at each major stage.
+A multi-agent pipeline that takes a feature idea from raw conversation all the way to a merged GitHub PR. The human is involved at **two points only**:
+
+1. **PM Agent interview (interactive)** — the PM Agent asks you the requirement-gap questions and waits for your answers before finalizing the PRD.
+2. **Plan gate (approval)** — you approve (or edit/abort) the plan after the Planner Agent.
+
+Every other stage (Dev, Test, Review, PR) auto-proceeds without pausing.
+
+> **Mechanic:** subagents spawned via the Agent tool cannot talk to you directly. So the PM "interview" is mediated by the orchestrator: the PM Agent returns its open questions with `status: "needs_human"`, the orchestrator asks you, then resumes the same PM Agent with your answers so it can finalize the PRD.
 
 ---
 
@@ -131,6 +138,8 @@ node --version
 **Model:** `claude-sonnet-4-6`
 **Role:** Product Manager. Optionally reads an existing Jira ticket, conducts a gap-filling interview only for missing information, writes a PRD, and creates or updates a Jira issue.
 
+> **Interactive:** the PM Agent is the one stage that actively interviews the human. Because a subagent cannot prompt the user directly, it surfaces its open questions by writing `handoff.json` with `status: "needs_human"` and listing the questions in its final message. The orchestrator asks you and resumes the same agent with your answers; the PM Agent then finalizes the PRD and writes a `status: "done"` handoff. If the ticket already answers all 7 questions, it skips straight to `done` with no interview.
+
 **Input:**
 - Free-text description of the feature/bug from the user (optional if Jira ticket is provided).
 - Optional: existing Jira ticket key (e.g. `SB-42`). When provided, the agent fetches the ticket first and skips interview questions already answered there.
@@ -147,11 +156,12 @@ IF jira_ticket_key is provided:
   1. Fetch ticket from Jira API (GET /rest/api/3/issue/<key>)
   2. Extract: summary, description, acceptance criteria, priority, labels, story points
   3. Map each of the 7 interview questions against what the ticket already answers
-  4. Ask ONLY the questions that are unanswered or vague (may be 0 questions)
+  4. If any questions are unanswered/vague → emit status "needs_human" with those questions,
+     wait to be resumed with the answers (may be 0 questions → skip straight to PRD)
   5. Merge ticket content + interview answers → write PRD
   6. Save existing ticket JSON to jira-ticket.json (no new ticket created)
 ELSE:
-  1. Ask all 7 interview questions one at a time
+  1. Emit status "needs_human" with all 7 interview questions; wait to be resumed with answers
   2. Write PRD from answers
   3. Create a new Jira issue via POST /rest/api/3/issue
   4. Save new ticket JSON to jira-ticket.json
@@ -229,14 +239,23 @@ STEP 1 — Gather context
          6. Priority: critical / high / medium / low?
          7. Any dependencies on other tickets or external services?
     e. For each question already clearly answered in the ticket, mark it as resolved.
-    f. Ask the user ONLY the questions that remain unanswered or are too vague.
-       If all questions are answered, skip the interview entirely and proceed to STEP 2.
+    f. INTERACTIVE INTERVIEW: if any questions remain unanswered or vague, do NOT guess.
+       Write handoff.json with status "needs_human" listing those questions, and put the
+       questions clearly in your final message. STOP — the orchestrator will ask the human
+       and resume you with the answers. (You cannot prompt the user directly; you are a subagent.)
+       If all 7 questions are already answered by the ticket, skip the interview and go to STEP 2.
   ELSE:
-    a. Ask the user all 7 questions above, one at a time.
-    b. After gathering answers, create a new Jira issue:
+    a. INTERACTIVE INTERVIEW: write handoff.json with status "needs_human" listing all 7
+       questions, put them in your final message, and STOP. The orchestrator asks the human
+       and resumes you with the answers.
+    b. After being resumed with answers, create a new Jira issue:
          POST $JIRA_BASE_URL/rest/api/3/issue
          Issue type: "Story" for features, "Bug" for bugs, "Task" for small tasks.
     c. Save the created issue JSON to .claude/workflow/<run-id>/jira-ticket.json.
+
+  NOTE ON RESUMING: when the orchestrator resumes you with the human's answers, continue
+  from STEP 2 using those answers. Only emit "needs_human" once; if you still have gaps after
+  the answers, make reasonable assumptions and record them in the PRD's "Open Questions".
 
 STEP 2 — Write PRD
   Merge ticket content (if any) and interview answers.
@@ -244,7 +263,7 @@ STEP 2 — Write PRD
   Save to .claude/workflow/<run-id>/prd.md.
 
 STEP 3 — Handoff
-  Write .claude/workflow/<run-id>/handoff.json:
+  Write .claude/workflow/<run-id>/handoff.json (final, after the PRD is written):
   { "agent": "pm", "status": "done", "run_id": "<run-id>", "ticket": "<SB-n>",
     "branch": null, "next_agent": "planner",
     "summary": "PRD written. Jira ticket <SB-n> used/created." }
@@ -533,7 +552,12 @@ Review file: .claude/workflow/<run-id>/review.md
 
 ## Orchestrator — Running the Full Pipeline
 
-The orchestrator is the main Claude Code session. It spawns agents in sequence using the model specified in each agent's definition, reads `handoff.json` after each agent completes, and pauses for your approval before proceeding.
+The orchestrator is the main Claude Code session. It spawns agents in sequence using the model specified in each agent's definition and reads `handoff.json` after each agent completes. The human is involved at two points:
+
+- **PM interview** — when the PM Agent returns `status: "needs_human"` (it has open questions), the orchestrator relays those questions to you, then resumes the same PM Agent with your answers.
+- **Plan gate** — after the Planner Agent completes (before the Dev Agent runs), the orchestrator pauses for your Approve / Edit / Abort.
+
+Every other stage auto-proceeds: once an agent finishes with `status: "done"`, the orchestrator immediately spawns the next agent without waiting for you. (A `status` of `failed` always stops the pipeline; `needs_human` pauses for input at any stage — see step 5.)
 
 ### Orchestrator loop (pseudo-code)
 
@@ -551,9 +575,17 @@ while next_agent is not null:
   4. Agent completes → writes handoff.json
   5. Read handoff.json:
        if status == "failed"  → stop, report error
-       if status == "needs_human" → pause, ask user, resume
+       if status == "needs_human" →
+            # PM interview (and any agent that needs input) is handled here:
+            ask the user the agent's open questions,
+            then RESUME the same agent (SendMessage to its agentId) with the answers.
+            Re-read handoff.json after it finishes. Do NOT advance next_agent yet.
        if status == "done"    → show summary to user
-  6. PAUSE — ask user: Approve / Edit / Abort
+  6. PLAN GATE (the only approval gate):
+       if handoff.json["agent"] == "planner":
+            PAUSE — ask user: Approve / Edit / Abort
+       else:
+            auto-proceed (no pause)   # PM, dev, tester, reviewer, pr
   7. next_agent = handoff.json["next_agent"]
 ```
 
@@ -581,17 +613,19 @@ You can invoke the whole pipeline from a single Claude Code message.
 ```
 
 This triggers the orchestrator to:
-1. Spawn PM Agent (`sonnet`) — reads Jira ticket if provided, interviews for gaps → writes PRD + handoff.json → **pause for your approval**
-2. Spawn Planner Agent (`opus`) → writes handoff.json → **pause for your approval**
-3. Spawn Dev Agent (`sonnet`) → writes handoff.json → **pause for your approval**
-4. Spawn Test Agent (`sonnet`) → writes handoff.json → **pause for your approval**
-5. Spawn Review Agent (`opus`) → auto-fixes MUST FIX, writes handoff.json → **pause for your approval**
-6. Spawn PR Agent (`haiku`) → opens PR, writes handoff.json (next=null) → prints URL
+1. Spawn PM Agent (`sonnet`) — reads Jira ticket if provided → **💬 INTERACTIVE: asks you the requirement-gap questions and waits for answers** → writes PRD + handoff.json → _auto-proceed_
+2. Spawn Planner Agent (`opus`) → writes handoff.json → **⛔ PLAN GATE — pause for your approval**
+3. Spawn Dev Agent (`sonnet`) → writes handoff.json → _auto-proceed_
+4. Spawn Test Agent (`sonnet`) → writes handoff.json → _auto-proceed_
+5. Spawn Review Agent (`opus`) → auto-fixes MUST FIX, writes handoff.json → _auto-proceed_
+6. Spawn PR Agent (`haiku`) → pushes branch + opens PR, writes handoff.json (next=null) → prints URL
 
-At each gate you can:
-- **Approve** → orchestrator reads `next_agent` from handoff.json and spawns next
-- **Edit** → modify the output file (plan.md, etc.) before approving
+Besides the PM interview in step 1, the **only** approval stop is the plan gate after step 2. At that gate you can:
+- **Approve** → orchestrator reads `next_agent` from handoff.json and spawns the Dev Agent
+- **Edit** → modify `plan.md` before approving
 - **Abort** → stop the pipeline
+
+> **Note:** With auto-proceed enabled, the PR Agent (step 6) pushes the feature branch to `origin` and opens a GitHub PR **without a confirmation pause**. This requires `gh` to be authenticated beforehand. A `failed` or `needs_human` handoff at any stage still halts the pipeline automatically.
 
 ---
 
@@ -652,4 +686,4 @@ node -e "require('dotenv').config({path:'.env.local'}); console.log(process.env.
 - **No `gh` CLI installed** — the PR Agent will fail at step 3. Install with `sudo apt install gh` and run `gh auth login` once.
 - **No test framework configured** — the Test Agent will install Vitest on first run. Review and commit the config files it adds.
 - **Production deploy** — the PR Agent does NOT trigger a production deploy. After merging, follow the deploy sequence in `KNOWLEDGE.md` (build → restart service).
-- **Approval gates are manual** — Claude Code does not auto-proceed between agents. Each agent is spawned explicitly, giving you full control.
+- **Two human touchpoints** — (1) the PM Agent interview (interactive: it asks you gap questions via the orchestrator and waits), and (2) the plan gate approval after the Planner Agent. Dev, Test, Review, and PR auto-proceed: the orchestrator spawns the next agent as soon as the previous one returns `status: "done"`. A `failed` handoff halts the run; `needs_human` pauses for input. To add back more gates, change step 6 of the orchestrator loop (e.g. also pause when `agent == "reviewer"`).
