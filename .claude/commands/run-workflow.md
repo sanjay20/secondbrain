@@ -54,16 +54,27 @@ IF the Jira ticket above is NOT "none":
        5. Is this a small task (≤ 1 day) or a feature (> 1 day)?
        6. Priority: critical / high / medium / low?
        7. Any dependencies on other tickets or external services?
-  e. Ask the user ONLY the questions that remain unanswered or are too vague.
-     If all questions are answered, skip the interview entirely.
+  e. INTERACTIVE INTERVIEW (you are a subagent and cannot prompt the user directly):
+     if any of the 7 questions remain unanswered or vague, do NOT guess. Write
+     `.claude/workflow/<run-id>/handoff.json` with status "needs_human", list those
+     questions in your final message, and STOP. The orchestrator will ask the human and
+     resume you with the answers. If all questions are already answered by the ticket,
+     skip the interview and proceed to STEP 2.
   f. The ticket key to use is: <jira_ticket>
 
 ELSE (no Jira ticket):
-  a. Ask the user all 7 questions above, one at a time.
-  b. After gathering answers, create a new Jira issue:
+  a. INTERACTIVE INTERVIEW: write `.claude/workflow/<run-id>/handoff.json` with status
+     "needs_human", list all 7 questions in your final message, and STOP. The orchestrator
+     will ask the human and resume you with the answers.
+  b. After being resumed with answers, create a new Jira issue:
        POST $JIRA_BASE_URL/rest/api/3/issue
        Issue type: "Story" for features, "Bug" for bugs, "Task" for small tasks.
   c. Save the created issue JSON to `.claude/workflow/<run-id>/jira-ticket.json`.
+
+NOTE ON RESUMING: when resumed with the human's answers, continue from STEP 2 using them.
+Only emit "needs_human" once; if gaps remain after the answers, make reasonable assumptions
+and record them in the PRD's "Open Questions". The needs_human handoff is interim — your
+FINAL handoff (STEP 3) must have status "done".
 
 **STEP 2 — Write PRD**
 
@@ -111,11 +122,51 @@ Print the Jira ticket URL ($JIRA_BASE_URL/browse/<SB-n>) and key when done.
 
 ---
 
-## Step 3 — Approval gate after PM Agent
+## Step 3 — PM interview (interactive, mediated — NOT an approval gate)
 
-After the PM Agent completes:
-1. Show the user the summary from `handoff.json`.
-2. Show the path to the PRD: `.claude/workflow/<run-id>/prd.md`
-3. Ask: **"Approve to continue to Planner Agent, or Abort?"**
-4. If approved, read `handoff.json` to get `ticket` and `run_id`, then proceed to spawn the Planner Agent using the prompt in `.claude/AGENTIC_WORKFLOW.md` (Agent 2 — Planner Agent), substituting `<run-id>` and `<n>`.
-5. Continue the pipeline (Dev → Test → Review → PR), pausing for approval at each stage as described in `AGENTIC_WORKFLOW.md`.
+The human is involved at only two points in this pipeline: the PM interview (here) and the
+plan gate (Step 4). Everything else auto-proceeds.
+
+After the PM Agent returns:
+1. Read `handoff.json`.
+2. If `status == "needs_human"`:
+   - The PM Agent has open requirement questions. Relay them to the user (use AskUserQuestion
+     for the gap questions; keep it to the questions the agent listed).
+   - Resume the SAME PM Agent with the user's answers (SendMessage to its agentId) so it can
+     finalize the PRD. Re-read `handoff.json` after it finishes.
+   - Repeat only if it emits `needs_human` again (it shouldn't — it's instructed to ask once).
+3. If `status == "failed"` → stop and report the error.
+4. Once `status == "done"`: briefly show the PRD path (`.claude/workflow/<run-id>/prd.md`) and
+   the Jira key, then **auto-proceed to the Planner Agent — do NOT ask for approval here.**
+
+## Step 4 — Spawn Planner Agent → PLAN GATE (the only approval gate)
+
+1. Read `handoff.json` for `ticket` and `run_id`.
+2. Spawn the Planner Agent with model `claude-opus-4-8` using the prompt in
+   `.claude/AGENTIC_WORKFLOW.md` (Agent 2 — Planner Agent), substituting `<run-id>` and `<n>`.
+3. When it returns `status: "done"`, show the user the plan summary and the path
+   `.claude/workflow/<run-id>/plan.md`.
+4. **⛔ PLAN GATE — PAUSE and ask the user: Approve / Edit / Abort.**
+   - Approve → continue to Step 5.
+   - Edit → let the user modify `plan.md`, then re-confirm and continue.
+   - Abort → stop the pipeline.
+
+## Step 5 — Auto-run Dev → Test → Review → PR (no approval pauses)
+
+After the plan is approved, run the remaining agents back-to-back WITHOUT pausing for
+approval between them. For each: read `handoff.json` for `branch`/`ticket`, spawn the agent
+using its prompt from `.claude/AGENTIC_WORKFLOW.md`, and on `status: "done"` show a one-line
+summary and immediately spawn the next.
+
+1. **Dev Agent** — model `claude-sonnet-4-6` (Agent 3). Branch off `master`.
+2. **Test Agent** — model `claude-sonnet-4-6` (Agent 4).
+3. **Review Agent** — model `claude-opus-4-8` (Agent 5). Auto-fixes MUST FIX items.
+4. **PR Agent** — model `claude-haiku-4-5-20251001` (Agent 6). Pushes the branch to `origin`
+   and opens the GitHub PR automatically (requires `gh` to be authenticated). Print the PR URL.
+
+Stop conditions that override auto-proceed at ANY stage:
+- `status == "failed"` → stop immediately and report the error (do not advance).
+- `status == "needs_human"` → pause, relay the agent's question to the user, then resume that
+  same agent with the answer before continuing.
+
+Do not ask the user for approval at any stage other than the plan gate (Step 4).
