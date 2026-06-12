@@ -10,7 +10,7 @@ const createSchema = z.object({
   pillar: z.string().max(50).optional(),
   status: z.enum(["todo", "in_progress", "done"]).default("todo"),
   priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
-  scheduledDate: z.coerce.date(),
+  scheduledDate: z.string(),
 });
 
 export async function GET(req: Request) {
@@ -58,9 +58,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error.issues[0]?.message }, { status: 400 });
   }
 
-  // Normalize scheduledDate to start of that day in user timezone
+  // Parse scheduledDate string (yyyy-MM-dd) as a local date in user timezone, then convert to UTC
   const tz = user.timezone ?? undefined;
-  const scheduledDate = startOfDayInTz(result.data.scheduledDate, tz);
+  const parts = result.data.scheduledDate.split('-');
+  const localDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const scheduledDate = startOfDayInTz(localDate, tz);
 
   const task = await prisma.task.create({
     data: {
