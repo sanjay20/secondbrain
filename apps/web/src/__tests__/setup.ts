@@ -124,6 +124,10 @@ vi.mock("@/lib/db", () => ({
       delete: vi.fn(),
       count: vi.fn(),
     },
+    moodLog: {
+      findMany: vi.fn(),
+      upsert: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
