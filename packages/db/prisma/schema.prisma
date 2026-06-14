@@ -22,6 +22,7 @@ model User {
 
   habits              Habit[]
   habitLogs           HabitLog[]
+  workouts            Workout[]
   goals               Goal[]
   skills              Skill[]
   journals            JournalEntry[]
@@ -87,6 +88,20 @@ model HabitLog {
   @@unique([habitId, date])
   @@index([userId, date])
   @@map("habit_logs")
+}
+
+model Workout {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  duration  Int
+  notes     String?
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+  @@map("workouts")
 }
 
 // ─── CAREER MODULE ───────────────────────────────────────────────────────────
