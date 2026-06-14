@@ -1,0 +1,9 @@
+{
+  "agent": "reviewer",
+  "status": "done",
+  "run_id": "20260614-2349",
+  "ticket": "SB-4",
+  "branch": "feature/SB-4-workout-log",
+  "next_agent": "pr",
+  "summary": "0 MUST FIX resolved (none found). 2 SHOULD FIX left for human review."
+}

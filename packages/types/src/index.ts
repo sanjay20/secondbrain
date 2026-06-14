@@ -30,6 +30,20 @@ export interface HabitLog {
   createdAt: Date;
 }
 
+export const WORKOUT_TYPE_MAX_LEN = 50;
+export const WORKOUT_NOTES_MAX_LEN = 500;
+export const WORKOUT_PAGE_LIMIT = 50;
+
+export interface Workout {
+  id: string;
+  userId: string;
+  type: string;
+  duration: number;
+  notes?: string | null;
+  date: Date | string;
+  createdAt: Date | string;
+}
+
 export type HabitFrequency = "daily" | "weekly";
 export type HabitCategory = "health" | "fitness" | "mindfulness" | "learning" | "productivity" | "social" | "general";
 
