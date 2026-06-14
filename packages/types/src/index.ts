@@ -388,6 +388,16 @@ export interface GratitudeEntry {
   createdAt: Date | string;
 }
 
+export const AFFIRMATION_TEXT_MIN_LEN = 1;
+export const AFFIRMATION_TEXT_MAX_LEN = 200;
+
+export interface Affirmation {
+  id: string;
+  userId: string;
+  text: string;
+  createdAt: Date | string;
+}
+
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {

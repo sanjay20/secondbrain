@@ -135,6 +135,13 @@ vi.mock("@/lib/db", () => ({
       count: vi.fn(),
       delete: vi.fn(),
     },
+    affirmation: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      count: vi.fn(),
+      delete: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));

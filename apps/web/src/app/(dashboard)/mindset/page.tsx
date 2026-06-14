@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { MoodPanel } from "@/components/mindset/mood-panel";
 import { GratitudePanel } from "@/components/mindset/gratitude-panel";
+import { AffirmationPanel } from "@/components/mindset/affirmation-panel";
 
 export default function MindsetPage() {
   const [tab, setTab] = useState("mood");
@@ -19,6 +20,7 @@ export default function MindsetPage() {
             <TabsList>
               <TabsTrigger value="mood">Mood Tracker</TabsTrigger>
               <TabsTrigger value="gratitude">Gratitude</TabsTrigger>
+              <TabsTrigger value="affirmations">Affirmations</TabsTrigger>
             </TabsList>
           </div>
 
@@ -27,6 +29,9 @@ export default function MindsetPage() {
           </TabsContent>
           <TabsContent value="gratitude">
             <GratitudePanel />
+          </TabsContent>
+          <TabsContent value="affirmations">
+            <AffirmationPanel />
           </TabsContent>
         </Tabs>
       </div>

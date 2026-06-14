@@ -42,6 +42,7 @@ model User {
   coreValues          CoreValue[]
   moodLogs            MoodLog[]
   gratitudeEntries    GratitudeEntry[]
+  affirmations        Affirmation[]
 
   @@map("users")
 }
@@ -456,6 +457,17 @@ model GratitudeEntry {
 
   @@index([userId, date])
   @@map("gratitude_entries")
+}
+
+model Affirmation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("affirmations")
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
