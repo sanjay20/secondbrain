@@ -122,10 +122,10 @@ Print the Jira ticket URL ($JIRA_BASE_URL/browse/<SB-n>) and key when done.
 
 ---
 
-## Step 3 — PM interview (interactive, mediated — NOT an approval gate)
+## Step 3 — PM interview + PRD GATE (approval gate)
 
-The human is involved at only two points in this pipeline: the PM interview (here) and the
-plan gate (Step 4). Everything else auto-proceeds.
+The human is involved at two approval gates in this pipeline: the PRD gate (here, after the PM
+Agent) and the plan gate (Step 4). Dev / Test / Review / PR all auto-proceed.
 
 After the PM Agent returns:
 1. Read `handoff.json`.
@@ -136,10 +136,14 @@ After the PM Agent returns:
      finalize the PRD. Re-read `handoff.json` after it finishes.
    - Repeat only if it emits `needs_human` again (it shouldn't — it's instructed to ask once).
 3. If `status == "failed"` → stop and report the error.
-4. Once `status == "done"`: briefly show the PRD path (`.claude/workflow/<run-id>/prd.md`) and
-   the Jira key, then **auto-proceed to the Planner Agent — do NOT ask for approval here.**
+4. Once `status == "done"`: show the user the PRD summary and the path
+   `.claude/workflow/<run-id>/prd.md` plus the Jira key, then:
+   **⛔ PRD GATE — PAUSE and ask the user: Approve / Edit / Abort.**
+   - Approve → continue to Step 4 (Planner Agent).
+   - Edit → let the user modify `prd.md` (or answer follow-ups), then re-confirm and continue.
+   - Abort → stop the pipeline.
 
-## Step 4 — Spawn Planner Agent → PLAN GATE (the only approval gate)
+## Step 4 — Spawn Planner Agent → PLAN GATE (approval gate)
 
 1. Read `handoff.json` for `ticket` and `run_id`.
 2. Spawn the Planner Agent with model `claude-opus-4-8` using the prompt in
@@ -158,7 +162,7 @@ approval between them. For each: read `handoff.json` for `branch`/`ticket`, spaw
 using its prompt from `.claude/AGENTIC_WORKFLOW.md`, and on `status: "done"` show a one-line
 summary and immediately spawn the next.
 
-1. **Dev Agent** — model `claude-sonnet-4-6` (Agent 3). Branch off `master`.
+1. **Dev Agent** — model `claude-opus-4-8` (Agent 3). Branch off `master`.
 2. **Test Agent** — model `claude-sonnet-4-6` (Agent 4).
 3. **Review Agent** — model `claude-opus-4-8` (Agent 5). Auto-fixes MUST FIX items.
 4. **PR Agent** — model `claude-haiku-4-5-20251001` (Agent 6). Pushes the branch to `origin`
@@ -169,4 +173,4 @@ Stop conditions that override auto-proceed at ANY stage:
 - `status == "needs_human"` → pause, relay the agent's question to the user, then resume that
   same agent with the answer before continuing.
 
-Do not ask the user for approval at any stage other than the plan gate (Step 4).
+Do not ask the user for approval at any stage other than the PRD gate (Step 3) and the plan gate (Step 4).

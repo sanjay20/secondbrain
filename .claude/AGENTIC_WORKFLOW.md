@@ -1,8 +1,8 @@
 # SecondBrain — Agentic Development Workflow
 
-A multi-agent pipeline that takes a feature idea from raw conversation all the way to a merged GitHub PR. The human is involved at **two points only**:
+A multi-agent pipeline that takes a feature idea from raw conversation all the way to a merged GitHub PR. The human approves at **two gates only**:
 
-1. **PM Agent interview (interactive)** — the PM Agent asks you the requirement-gap questions and waits for your answers before finalizing the PRD.
+1. **PRD gate (approval)** — after the PM Agent (which also runs an interactive requirement-gap interview), you approve (or edit/abort) the PRD before planning begins.
 2. **Plan gate (approval)** — you approve (or edit/abort) the plan after the Planner Agent.
 
 Every other stage (Dev, Test, Review, PR) auto-proceeds without pausing.
@@ -62,7 +62,7 @@ Each agent is assigned the cheapest model that can reliably handle its task. Exp
 |-------|-------|--------|
 | PM Agent | `claude-sonnet-4-6` | Structured interview + PRD writing — balanced capability |
 | Planner Agent | `claude-opus-4-8` | Codebase-wide reasoning, architectural thinking — highest quality needed |
-| Dev Agent | `claude-sonnet-4-6` | TypeScript implementation — Sonnet handles code very well at lower cost |
+| Dev Agent | `claude-opus-4-8` | TypeScript implementation — Opus for highest-quality code generation |
 | Test Agent | `claude-sonnet-4-6` | Test writing follows clear patterns — Sonnet is sufficient |
 | Review Agent | `claude-opus-4-8` | Multi-angle security/architecture analysis — deep reasoning required |
 | PR Agent | `claude-haiku-4-5-20251001` | Pure CLI execution (tsc, git push, gh pr create) — minimal reasoning |
@@ -332,7 +332,7 @@ Finally, write .claude/workflow/<run-id>/handoff.json:
 
 ### Agent 3 — Dev Agent (`dev`)
 
-**Model:** `claude-sonnet-4-6`
+**Model:** `claude-opus-4-8`
 **Role:** Senior Developer. Implements the changes described in the plan exactly.
 
 **Input:** `.claude/workflow/<run-id>/plan.md`
@@ -352,7 +352,7 @@ Finally, write .claude/workflow/<run-id>/handoff.json:
 **Prompt to spawn this agent:**
 ```
 You are the Dev Agent for the SecondBrain project.
-Model: claude-sonnet-4-6
+Model: claude-opus-4-8
 Read KNOWLEDGE.md and AGENTIC_WORKFLOW.md in .claude/ to understand the codebase.
 Read .claude/workflow/<run-id>/handoff.json to confirm the ticket key.
 Read the implementation plan at .claude/workflow/<run-id>/plan.md.
@@ -552,9 +552,9 @@ Review file: .claude/workflow/<run-id>/review.md
 
 ## Orchestrator — Running the Full Pipeline
 
-The orchestrator is the main Claude Code session. It spawns agents in sequence using the model specified in each agent's definition and reads `handoff.json` after each agent completes. The human is involved at two points:
+The orchestrator is the main Claude Code session. It spawns agents in sequence using the model specified in each agent's definition and reads `handoff.json` after each agent completes. The human approves at two gates:
 
-- **PM interview** — when the PM Agent returns `status: "needs_human"` (it has open questions), the orchestrator relays those questions to you, then resumes the same PM Agent with your answers.
+- **PRD gate** — after the PM Agent completes (it first runs an interactive requirement-gap interview when it returns `status: "needs_human"`; the orchestrator relays those questions and resumes the same PM Agent with your answers). Once the PRD is done, the orchestrator pauses for your Approve / Edit / Abort before planning.
 - **Plan gate** — after the Planner Agent completes (before the Dev Agent runs), the orchestrator pauses for your Approve / Edit / Abort.
 
 Every other stage auto-proceeds: once an agent finishes with `status: "done"`, the orchestrator immediately spawns the next agent without waiting for you. (A `status` of `failed` always stops the pipeline; `needs_human` pauses for input at any stage — see step 5.)
@@ -581,11 +581,11 @@ while next_agent is not null:
             then RESUME the same agent (SendMessage to its agentId) with the answers.
             Re-read handoff.json after it finishes. Do NOT advance next_agent yet.
        if status == "done"    → show summary to user
-  6. PLAN GATE (the only approval gate):
-       if handoff.json["agent"] == "planner":
+  6. APPROVAL GATES (PRD gate + plan gate):
+       if handoff.json["agent"] in ("pm", "planner"):
             PAUSE — ask user: Approve / Edit / Abort
        else:
-            auto-proceed (no pause)   # PM, dev, tester, reviewer, pr
+            auto-proceed (no pause)   # dev, tester, reviewer, pr
   7. next_agent = handoff.json["next_agent"]
 ```
 
@@ -613,16 +613,16 @@ You can invoke the whole pipeline from a single Claude Code message.
 ```
 
 This triggers the orchestrator to:
-1. Spawn PM Agent (`sonnet`) — reads Jira ticket if provided → **💬 INTERACTIVE: asks you the requirement-gap questions and waits for answers** → writes PRD + handoff.json → _auto-proceed_
+1. Spawn PM Agent (`sonnet`) — reads Jira ticket if provided, **💬 INTERACTIVE: asks you the requirement-gap questions and waits for answers**, writes PRD + handoff.json → **⛔ PRD GATE — pause for your approval**
 2. Spawn Planner Agent (`opus`) → writes handoff.json → **⛔ PLAN GATE — pause for your approval**
-3. Spawn Dev Agent (`sonnet`) → writes handoff.json → _auto-proceed_
+3. Spawn Dev Agent (`opus`) → writes handoff.json → _auto-proceed_
 4. Spawn Test Agent (`sonnet`) → writes handoff.json → _auto-proceed_
 5. Spawn Review Agent (`opus`) → auto-fixes MUST FIX, writes handoff.json → _auto-proceed_
 6. Spawn PR Agent (`haiku`) → pushes branch + opens PR, writes handoff.json (next=null) → prints URL
 
-Besides the PM interview in step 1, the **only** approval stop is the plan gate after step 2. At that gate you can:
-- **Approve** → orchestrator reads `next_agent` from handoff.json and spawns the Dev Agent
-- **Edit** → modify `plan.md` before approving
+There are **two** approval stops: the PRD gate after step 1 and the plan gate after step 2. At each gate you can:
+- **Approve** → orchestrator reads `next_agent` from handoff.json and spawns the next agent
+- **Edit** → modify `prd.md` (PRD gate) or `plan.md` (plan gate) before approving
 - **Abort** → stop the pipeline
 
 > **Note:** With auto-proceed enabled, the PR Agent (step 6) pushes the feature branch to `origin` and opens a GitHub PR **without a confirmation pause**. This requires `gh` to be authenticated beforehand. A `failed` or `needs_human` handoff at any stage still halts the pipeline automatically.
@@ -652,7 +652,7 @@ Besides the PM interview in step 1, the **only** approval stop is the plan gate 
 |-------|-------|-------|------------|
 | 1. Requirements | `pm` | `claude-sonnet-4-6` | `prd.md` + Jira ticket |
 | 2. Planning | `planner` | `claude-opus-4-8` | `plan.md` |
-| 3. Implementation | `dev` | `claude-sonnet-4-6` | feature branch commits |
+| 3. Implementation | `dev` | `claude-opus-4-8` | feature branch commits |
 | 4. Testing | `tester` | `claude-sonnet-4-6` | test files + `test-report.md` |
 | 5. Code review | `reviewer` | `claude-opus-4-8` | `review.md` + MUST FIX commits |
 | 6. Pull request | `pr` | `claude-haiku-4-5-20251001` | GitHub PR URL |
@@ -686,4 +686,4 @@ node -e "require('dotenv').config({path:'.env.local'}); console.log(process.env.
 - **No `gh` CLI installed** — the PR Agent will fail at step 3. Install with `sudo apt install gh` and run `gh auth login` once.
 - **No test framework configured** — the Test Agent will install Vitest on first run. Review and commit the config files it adds.
 - **Production deploy** — the PR Agent does NOT trigger a production deploy. After merging, follow the deploy sequence in `KNOWLEDGE.md` (build → restart service).
-- **Two human touchpoints** — (1) the PM Agent interview (interactive: it asks you gap questions via the orchestrator and waits), and (2) the plan gate approval after the Planner Agent. Dev, Test, Review, and PR auto-proceed: the orchestrator spawns the next agent as soon as the previous one returns `status: "done"`. A `failed` handoff halts the run; `needs_human` pauses for input. To add back more gates, change step 6 of the orchestrator loop (e.g. also pause when `agent == "reviewer"`).
+- **Two approval gates** — (1) the PRD gate after the PM Agent (which first runs the interactive gap-question interview), and (2) the plan gate after the Planner Agent. Both pause for Approve / Edit / Abort. Dev, Test, Review, and PR auto-proceed: the orchestrator spawns the next agent as soon as the previous one returns `status: "done"`. A `failed` handoff halts the run; `needs_human` pauses for input. To add or remove gates, change step 6 of the orchestrator loop (the `agent in ("pm", "planner")` check — e.g. also pause when `agent == "reviewer"`).
