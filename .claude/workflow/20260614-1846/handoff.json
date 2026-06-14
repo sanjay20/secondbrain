@@ -1,9 +1,9 @@
 {
-  "agent": "dev",
+  "agent": "reviewer",
   "status": "done",
   "run_id": "20260614-1846",
   "ticket": "SB-30",
   "branch": "feature/SB-30-affirmations",
-  "next_agent": "tester",
-  "summary": "Implementation complete. Typecheck passes. 6 commits on branch."
+  "next_agent": "pr",
+  "summary": "1 MUST FIX resolved. 2 SHOULD FIX left for human review."
 }
