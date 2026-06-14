@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { DailyBriefing } from "@/components/dashboard/daily-briefing";
+import { DailyAffirmation } from "@/components/dashboard/daily-affirmation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { userDayRange } from "@/lib/datetime";
@@ -19,7 +20,7 @@ async function getDashboardData() {
 
   const dayRange = userDayRange(today, user.timezone ?? undefined);
 
-  const [habits, habitLogs, goals, briefing, todaysTasks] = await Promise.all([
+  const [habits, habitLogs, goals, briefing, todaysTasks, allAffirmations] = await Promise.all([
     prisma.habit.findMany({ where: { userId: user.id, isActive: true } }),
     prisma.habitLog.findMany({
       where: { userId: user.id, date: today, completed: true },
@@ -40,6 +41,10 @@ async function getDashboardData() {
       orderBy: [{ priority: "desc" }, { scheduledDate: "asc" }],
       take: 5,
     }),
+    prisma.affirmation.findMany({
+      where: { userId: user.id },
+      select: { id: true, text: true },
+    }),
   ]);
 
   const completedTodayIds = new Set(habitLogs.map((l) => l.habitId));
@@ -49,6 +54,10 @@ async function getDashboardData() {
   const avgProgress = activeGoals.length
     ? Math.round(activeGoals.reduce((s, g) => s + g.progress, 0) / activeGoals.length)
     : 0;
+
+  const dailyAffirmation = allAffirmations.length
+    ? allAffirmations[Math.floor(Math.random() * allAffirmations.length)]
+    : null;
 
   return {
     user,
@@ -61,6 +70,7 @@ async function getDashboardData() {
     briefing: briefing?.content ?? null,
     todaysTasks,
     isMonday: isMonday(new Date()),
+    dailyAffirmation,
   };
 }
 
@@ -79,7 +89,7 @@ export default async function DashboardPage() {
     redirect("/sign-in");
   }
 
-  const { user, habits, completedTodayCount, longestStreak, activeGoalsCount, completedGoalsCount, avgProgress, briefing, todaysTasks, isMonday: showWeeklyReviewPrompt } = data;
+  const { user, habits, completedTodayCount, longestStreak, activeGoalsCount, completedGoalsCount, avgProgress, briefing, todaysTasks, isMonday: showWeeklyReviewPrompt, dailyAffirmation } = data;
 
   return (
     <div className="flex flex-col flex-1">
@@ -152,6 +162,8 @@ export default async function DashboardPage() {
                 </div>
               )}
             </div>
+
+            <DailyAffirmation affirmation={dailyAffirmation ?? null} />
 
             {/* Monday weekly review prompt */}
             {showWeeklyReviewPrompt && (
