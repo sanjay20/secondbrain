@@ -377,6 +377,17 @@ export interface MoodLog {
   updatedAt: Date | string;
 }
 
+export const GRATITUDE_MAX_PER_DAY = 3;
+export const GRATITUDE_ITEM_MAX_LEN = 280;
+
+export interface GratitudeEntry {
+  id: string;
+  userId: string;
+  item: string;
+  date: Date | string;
+  createdAt: Date | string;
+}
+
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {

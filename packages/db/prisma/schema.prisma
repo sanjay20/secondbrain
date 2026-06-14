@@ -41,6 +41,7 @@ model User {
   bucketListItems     BucketListItem[]
   coreValues          CoreValue[]
   moodLogs            MoodLog[]
+  gratitudeEntries    GratitudeEntry[]
 
   @@map("users")
 }
@@ -443,6 +444,18 @@ model MoodLog {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("mood_logs")
+}
+
+model GratitudeEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item      String
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+  @@map("gratitude_entries")
 }
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
