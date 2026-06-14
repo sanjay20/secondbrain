@@ -66,7 +66,7 @@ function parseActions(content: string): { text: string; actions: CoachAction[] |
 }
 
 const TYPE_DESTINATION: Record<CoachAction["type"], string> = {
-  habit: "Health & Habits",
+  habit: "Habits",
   goal: "Career / Knowledge",
   skill: "Career / Knowledge",
 };

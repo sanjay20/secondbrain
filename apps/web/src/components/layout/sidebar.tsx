@@ -6,6 +6,7 @@ import {
   Brain,
   LayoutDashboard,
   Heart,
+  Repeat,
   Briefcase,
   Wallet,
   BookOpen,
@@ -27,10 +28,16 @@ const navItems = [
     color: "text-violet-400",
   },
   {
-    label: "Health & Habits",
+    label: "Habits",
+    href: "/habits",
+    icon: Repeat,
+    color: "text-emerald-400",
+  },
+  {
+    label: "Health",
     href: "/health",
     icon: Heart,
-    color: "text-emerald-400",
+    color: "text-rose-400",
   },
   {
     label: "Career",
