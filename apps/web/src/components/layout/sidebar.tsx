@@ -15,8 +15,6 @@ import {
   ChevronRight,
   ListTodo,
   Compass,
-  Smile,
-  Sun,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav";
@@ -71,16 +69,10 @@ const navItems = [
     color: "text-fuchsia-400",
   },
   {
-    label: "Mood",
-    href: "/mindset/mood",
-    icon: Smile,
+    label: "Mindset",
+    href: "/mindset",
+    icon: Brain,
     color: "text-rose-400",
-  },
-  {
-    label: "Gratitude",
-    href: "/mindset/gratitude",
-    icon: Sun,
-    color: "text-amber-400",
   },
   {
     label: "AI Coach",
