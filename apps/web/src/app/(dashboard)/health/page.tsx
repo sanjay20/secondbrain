@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Header } from "@/components/layout/header";
 import { HabitCard } from "@/components/health/habit-card";
 import { HabitForm } from "@/components/health/habit-form";
+import { WorkoutLog } from "@/components/health/workout-log";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { Button } from "@/components/ui/button";
 import type { Habit } from "@secondbrain/types";
@@ -111,6 +112,8 @@ export default function HealthPage() {
             ))}
           </div>
         )}
+
+        <WorkoutLog />
       </div>
     </div>
   );
