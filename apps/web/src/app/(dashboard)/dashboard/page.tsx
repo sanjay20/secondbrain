@@ -20,7 +20,7 @@ async function getDashboardData() {
 
   const dayRange = userDayRange(today, user.timezone ?? undefined);
 
-  const [habits, habitLogs, goals, briefing, todaysTasks, allAffirmations] = await Promise.all([
+  const [habits, habitLogs, goals, briefing, todaysTasks, affirmationCount] = await Promise.all([
     prisma.habit.findMany({ where: { userId: user.id, isActive: true } }),
     prisma.habitLog.findMany({
       where: { userId: user.id, date: today, completed: true },
@@ -41,11 +41,17 @@ async function getDashboardData() {
       orderBy: [{ priority: "desc" }, { scheduledDate: "asc" }],
       take: 5,
     }),
-    prisma.affirmation.findMany({
-      where: { userId: user.id },
-      select: { id: true, text: true },
-    }),
+    prisma.affirmation.count({ where: { userId: user.id } }),
   ]);
+
+  const dailyAffirmation = affirmationCount
+    ? (await prisma.affirmation.findMany({
+        where: { userId: user.id },
+        select: { id: true, text: true },
+        skip: Math.floor(Math.random() * affirmationCount),
+        take: 1,
+      }))[0] ?? null
+    : null;
 
   const completedTodayIds = new Set(habitLogs.map((l) => l.habitId));
   const longestStreak = habits.reduce((max, h) => Math.max(max, h.streak), 0);
@@ -54,10 +60,6 @@ async function getDashboardData() {
   const avgProgress = activeGoals.length
     ? Math.round(activeGoals.reduce((s, g) => s + g.progress, 0) / activeGoals.length)
     : 0;
-
-  const dailyAffirmation = allAffirmations.length
-    ? allAffirmations[Math.floor(Math.random() * allAffirmations.length)]
-    : null;
 
   return {
     user,
