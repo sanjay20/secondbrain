@@ -128,6 +128,13 @@ vi.mock("@/lib/db", () => ({
       findMany: vi.fn(),
       upsert: vi.fn(),
     },
+    gratitudeEntry: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      count: vi.fn(),
+      delete: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
