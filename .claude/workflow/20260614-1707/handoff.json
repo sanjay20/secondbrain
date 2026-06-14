@@ -1,9 +1,9 @@
 {
-  "agent": "dev",
+  "agent": "reviewer",
   "status": "done",
   "run_id": "20260614-1707",
   "ticket": "SB-28",
   "branch": "feature/SB-28-gratitude-log",
-  "next_agent": "tester",
-  "summary": "Implementation complete. Typecheck passes. 4 commits on branch."
+  "next_agent": "pr",
+  "summary": "1 MUST FIX resolved (streak timezone bug). 2 SHOULD FIX left for human review."
 }
