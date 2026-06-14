@@ -357,6 +357,26 @@ export interface CoreValue {
   updatedAt: Date;
 }
 
+// ─── Mindset types ───────────────────────────────────────────────────────────
+
+export const MOOD_LEVELS: Record<number, { emoji: string; label: string }> = {
+  1: { emoji: "😞", label: "Very low" },
+  2: { emoji: "😕", label: "Low" },
+  3: { emoji: "😐", label: "Neutral" },
+  4: { emoji: "🙂", label: "Good" },
+  5: { emoji: "😄", label: "Great" },
+};
+
+export interface MoodLog {
+  id: string;
+  userId: string;
+  date: Date | string;
+  mood: number;
+  note?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
 // ─── Dashboard types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {
