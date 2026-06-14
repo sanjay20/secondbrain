@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function MoodRedirect() {
+export default function GratitudeRedirect() {
   redirect("/mindset");
 }
