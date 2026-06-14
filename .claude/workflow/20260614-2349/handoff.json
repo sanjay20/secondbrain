@@ -1,9 +1,9 @@
 {
-  "agent": "tester",
+  "agent": "reviewer",
   "status": "done",
   "run_id": "20260614-2349",
   "ticket": "SB-4",
   "branch": "feature/SB-4-workout-log",
-  "next_agent": "reviewer",
-  "summary": "Tests written. 3 test files, ~90-95% coverage of changed code. 82 new tests all passing (707 total, 0 failures)."
+  "next_agent": "pr",
+  "summary": "0 MUST FIX resolved (none found). 2 SHOULD FIX left for human review."
 }
