@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
-import { startOfMonth, endOfMonth, subDays, format } from "date-fns";
+import { startOfMonth, endOfMonth, subDays, format, parseISO } from "date-fns";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getTodayDate } from "@/lib/utils";
@@ -15,9 +15,9 @@ function computeStreak(entryDates: string[], todayKey: string): number {
   let streak = 0;
   const startKey = dateSet.has(todayKey)
     ? todayKey
-    : format(subDays(new Date(todayKey), 1), "yyyy-MM-dd");
+    : format(subDays(parseISO(todayKey), 1), "yyyy-MM-dd");
 
-  let cursor = new Date(startKey);
+  let cursor = parseISO(startKey);
   while (true) {
     const key = format(cursor, "yyyy-MM-dd");
     if (!dateSet.has(key)) break;
