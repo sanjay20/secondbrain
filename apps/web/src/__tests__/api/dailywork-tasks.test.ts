@@ -3,6 +3,15 @@ import { GET, POST } from "@/app/api/dailywork/tasks/route";
 import { PATCH, DELETE } from "@/app/api/dailywork/tasks/[id]/route";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { userDayRange } from "@/lib/datetime";
+
+const todayStrInTz = (tz: string) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 
 const mockRequireUser = requireUser as ReturnType<typeof vi.fn>;
 
@@ -148,6 +157,23 @@ describe("POST /api/dailywork/tasks", () => {
     mockRequireUser.mockRejectedValueOnce(Object.assign(new Error("Unauthorized"), { status: 401 }));
     await expect(POST(makeReq({ title: "Task", scheduledDate: "2026-05-30" }))).rejects.toThrow();
   });
+
+  // Regression: a task scheduled for "today" in the user's timezone must be
+  // stored such that the view=today filter (userDayRange) includes it. Before
+  // the fix, the POST handler double-converted the date and stored it a day off
+  // whenever the server timezone differed from the user's, so newly added tasks
+  // were invisible in the Daily Work "today" list.
+  it.each(["UTC", "America/New_York", "Asia/Kolkata"])(
+    "stores a today task inside the today-view range (tz=%s)",
+    async (tz) => {
+      mockRequireUser.mockResolvedValue({ id: "user-1", email: "test@example.com", timezone: tz });
+      await POST(makeReq({ title: "Today task", scheduledDate: todayStrInTz(tz) }));
+      const stored = db.task.create.mock.calls[0][0].data.scheduledDate as Date;
+      const range = userDayRange(new Date(), tz);
+      expect(stored.getTime()).toBeGreaterThanOrEqual(range.gte.getTime());
+      expect(stored.getTime()).toBeLessThan(range.lt.getTime());
+    }
+  );
 });
 
 // ─── PATCH /api/dailywork/tasks/[id] ──────────────────────────────────────

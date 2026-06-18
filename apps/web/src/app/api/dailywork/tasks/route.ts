@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { userDayRange, startOfDayInTz } from "@/lib/datetime";
+import { userDayRange, dateStringToUtc } from "@/lib/datetime";
 
 const createSchema = z.object({
   title: z.string().min(1).max(200),
@@ -58,11 +58,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error.issues[0]?.message }, { status: 400 });
   }
 
-  // Parse scheduledDate string (yyyy-MM-dd) as a local date in user timezone, then convert to UTC
+  // Interpret the scheduledDate string (yyyy-MM-dd) as midnight in the user's
+  // timezone. This matches userDayRange(...).gte so a task scheduled for "today"
+  // is included by the view=today filter regardless of the server's timezone.
   const tz = user.timezone ?? undefined;
-  const parts = result.data.scheduledDate.split('-');
-  const localDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-  const scheduledDate = startOfDayInTz(localDate, tz);
+  const scheduledDate = dateStringToUtc(result.data.scheduledDate, tz);
 
   const task = await prisma.task.create({
     data: {
