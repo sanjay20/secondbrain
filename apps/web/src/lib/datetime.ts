@@ -43,6 +43,20 @@ export function startOfDayInTz(date: Date, tz?: string | null): Date {
   return zonedToUtc(zoned, zone);
 }
 
+/**
+ * Convert a calendar date string ("yyyy-MM-dd") to the UTC instant of midnight
+ * on that date in the given timezone. Unlike startOfDayInTz, this does NOT
+ * interpret the input as an instant first, so it is independent of the server's
+ * local timezone. The result matches userDayRange(...).gte for the same date,
+ * which is required for "today" filtering to include newly created tasks.
+ */
+export function dateStringToUtc(dateStr: string, tz?: string | null): Date {
+  const zone = resolvedTz(tz);
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const zoned = new Date(year, (month ?? 1) - 1, day ?? 1, 0, 0, 0, 0);
+  return zonedToUtc(zoned, zone);
+}
+
 export function endOfDayInTz(date: Date, tz?: string | null): Date {
   const zone = resolvedTz(tz);
   const zoned = toZonedDate(date, zone);
