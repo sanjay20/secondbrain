@@ -37,7 +37,7 @@ export function TaskForm({ onSubmit, defaultDate, loading }: TaskFormProps) {
         title: title.trim(),
         pillar: pillar !== "none" ? pillar : undefined,
         priority,
-        scheduledDate: new Date(scheduledDate).toISOString(),
+        scheduledDate,
       });
       setTitle("");
     } finally {

@@ -8,7 +8,6 @@ import {
   Heart,
   Repeat,
   Briefcase,
-  Wallet,
   BookOpen,
   NotebookPen,
   Sparkles,
@@ -44,12 +43,6 @@ const navItems = [
     href: "/career",
     icon: Briefcase,
     color: "text-blue-400",
-  },
-  {
-    label: "Wealth",
-    href: "/wealth",
-    icon: Wallet,
-    color: "text-amber-400",
   },
   {
     label: "Knowledge",
