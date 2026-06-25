@@ -1,6 +1,6 @@
 import { SYSTEM_PROMPT_BASE } from "../client";
 import { getChatConfig } from "../ai-config";
-import { chat, streamChat } from "../provider";
+import { chat, streamChat, type ChatTurn } from "../provider";
 import { shouldMockAI } from "../shared";
 
 interface CareerContext {
@@ -67,7 +67,8 @@ Provide: 1) one thing going well, 2) one skill gap to address, 3) one concrete n
 
 export async function* streamCareerCoach(
   userMessage: string,
-  ctx: CareerContext
+  ctx: CareerContext,
+  history: ChatTurn[] = []
 ): AsyncGenerator<string> {
   if (shouldMockAI()) {
     for (const token of getMockCoachReply(userMessage).split(/(\s+)/)) {
@@ -89,7 +90,7 @@ User's skills: ${skillData || "none tracked"}
 ${journalData ? `\nRecent journal events (most recent first):\n${journalData}\n` : ""}
 ${ACTION_PROTOCOL}`;
 
-  yield* streamChat(getChatConfig("careerCoach"), system, userMessage);
+  yield* streamChat(getChatConfig("careerCoach"), system, userMessage, history);
 }
 
 const ACTION_PROTOCOL = `## Taking actions in the app

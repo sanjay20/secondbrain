@@ -130,11 +130,35 @@ export default function AICoachPage() {
   ]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Hydrate the most recent conversation from the DB so history survives refresh.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/ai/chat");
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          conversationId: string | null;
+          messages: Array<{ role: "user" | "assistant"; content: string }>;
+        };
+        if (cancelled || !data.conversationId || data.messages.length === 0) return;
+        setConversationId(data.conversationId);
+        setMessages(data.messages);
+      } catch {
+        // offline / not signed in — keep the default greeting
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function sendMessage(content: string) {
     if (!content.trim() || streaming) return;
@@ -151,11 +175,14 @@ export default function AICoachPage() {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content.trim() }),
+        body: JSON.stringify({ message: content.trim(), conversationId }),
       });
 
       if (!res.ok) throw new Error("Failed to get response");
       if (!res.body) throw new Error("No response body");
+
+      const convId = res.headers.get("X-Conversation-Id");
+      if (convId) setConversationId(convId);
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
