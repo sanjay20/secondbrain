@@ -132,6 +132,13 @@ vi.mock("@/lib/db", () => ({
     aiBriefing: {
       upsert: vi.fn(),
     },
+    aiWeeklyReview: {
+      findFirst: vi.fn(),
+      upsert: vi.fn(),
+    },
+    milestone: {
+      findMany: vi.fn(),
+    },
     gratitudeEntry: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
