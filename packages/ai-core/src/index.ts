@@ -14,3 +14,5 @@ export { getDayPlan, getEndOfDaySummary } from "./agents/dayplan-agent";
 export { getVisionInsights } from "./agents/vision-agent";
 export { generateWeeklyReview } from "./agents/weekly-review-agent";
 export type { WeeklyReviewContext, WeeklyReviewOutput } from "./agents/weekly-review-agent";
+export { generateGoalConflictReport } from "./agents/goal-conflict-agent";
+export type { GoalConflictContext, GoalConflictOutput, ConflictItem, ConflictSeverity } from "./agents/goal-conflict-agent";
