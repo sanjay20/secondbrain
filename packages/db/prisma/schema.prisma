@@ -44,6 +44,8 @@ model User {
   moodLogs            MoodLog[]
   gratitudeEntries    GratitudeEntry[]
   affirmations        Affirmation[]
+  coachConversations  CoachConversation[]
+  coachMessages       CoachMessage[]
 
   @@map("users")
 }
@@ -498,4 +500,34 @@ model AiBriefing {
   @@unique([userId, date])
   @@index([userId])
   @@map("ai_briefings")
+}
+
+// ─── AI COACH CHAT ───────────────────────────────────────────────────────────
+
+model CoachConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages  CoachMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("coach_conversations")
+}
+
+model CoachMessage {
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   CoachConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String // "user" | "assistant"
+  content        String
+  createdAt      DateTime          @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("coach_messages")
 }

@@ -8,6 +8,12 @@ export interface ChatConfig {
   maxTokens: number;
 }
 
+/** A prior conversation turn to resend to the model for multi-turn context. */
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -41,15 +47,23 @@ async function postWithRetry(
   return res;
 }
 
-/** Single-turn completion through the configured provider. */
-export async function chat(cfg: ChatConfig, system: string, prompt: string): Promise<string> {
+/**
+ * Completion through the configured provider. Pass `history` (prior turns,
+ * oldest-first, excluding the current prompt) for multi-turn context.
+ */
+export async function chat(
+  cfg: ChatConfig,
+  system: string,
+  prompt: string,
+  history: ChatTurn[] = []
+): Promise<string> {
   switch (cfg.provider) {
     case "gemini":
-      return geminiChat(cfg, system, prompt);
+      return geminiChat(cfg, system, prompt, history);
     case "groq":
-      return groqChat(cfg, system, prompt);
+      return groqChat(cfg, system, prompt, history);
     default:
-      return anthropicChat(cfg, system, prompt);
+      return anthropicChat(cfg, system, prompt, history);
   }
 }
 
@@ -57,28 +71,34 @@ export async function chat(cfg: ChatConfig, system: string, prompt: string): Pro
 export async function* streamChat(
   cfg: ChatConfig,
   system: string,
-  prompt: string
+  prompt: string,
+  history: ChatTurn[] = []
 ): AsyncGenerator<string> {
   switch (cfg.provider) {
     case "gemini":
-      yield* geminiStream(cfg, system, prompt);
+      yield* geminiStream(cfg, system, prompt, history);
       break;
     case "groq":
-      yield* groqStream(cfg, system, prompt);
+      yield* groqStream(cfg, system, prompt, history);
       break;
     default:
-      yield* anthropicStream(cfg, system, prompt);
+      yield* anthropicStream(cfg, system, prompt, history);
   }
 }
 
 // ---------- Anthropic ----------
 
-async function anthropicChat(cfg: ChatConfig, system: string, prompt: string): Promise<string> {
+async function anthropicChat(
+  cfg: ChatConfig,
+  system: string,
+  prompt: string,
+  history: ChatTurn[]
+): Promise<string> {
   const message = await anthropic.messages.create({
     model: cfg.model,
     max_tokens: cfg.maxTokens,
     system,
-    messages: [{ role: "user", content: prompt }],
+    messages: [...history, { role: "user", content: prompt }],
   });
   return (message.content[0] as { type: string; text: string }).text;
 }
@@ -86,14 +106,15 @@ async function anthropicChat(cfg: ChatConfig, system: string, prompt: string): P
 async function* anthropicStream(
   cfg: ChatConfig,
   system: string,
-  prompt: string
+  prompt: string,
+  history: ChatTurn[]
 ): AsyncGenerator<string> {
   const stream = await anthropic.messages.create({
     model: cfg.model,
     max_tokens: cfg.maxTokens,
     stream: true,
     system,
-    messages: [{ role: "user", content: prompt }],
+    messages: [...history, { role: "user", content: prompt }],
   });
   for await (const event of stream) {
     if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
@@ -108,10 +129,14 @@ function geminiKey(): string {
   return process.env.GEMINI_API_KEY ?? "";
 }
 
-function geminiBody(system: string, prompt: string, maxTokens: number): string {
+function geminiBody(system: string, prompt: string, maxTokens: number, history: ChatTurn[]): string {
+  const priorContents = history.map((t) => ({
+    role: t.role === "assistant" ? "model" : "user",
+    parts: [{ text: t.content }],
+  }));
   return JSON.stringify({
     systemInstruction: { parts: [{ text: system }] },
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    contents: [...priorContents, { role: "user", parts: [{ text: prompt }] }],
     generationConfig: { maxOutputTokens: maxTokens },
   });
 }
@@ -134,11 +159,16 @@ async function geminiError(res: Response): Promise<ProviderError> {
   return new ProviderError(message, res.status);
 }
 
-async function geminiChat(cfg: ChatConfig, system: string, prompt: string): Promise<string> {
+async function geminiChat(
+  cfg: ChatConfig,
+  system: string,
+  prompt: string,
+  history: ChatTurn[]
+): Promise<string> {
   const res = await postWithRetry(
     `${GEMINI_BASE}/${cfg.model}:generateContent?key=${geminiKey()}`,
     JSON_HEADERS,
-    geminiBody(system, prompt, cfg.maxTokens)
+    geminiBody(system, prompt, cfg.maxTokens, history)
   );
   if (!res.ok) throw await geminiError(res);
   return geminiText(await res.json());
@@ -147,12 +177,13 @@ async function geminiChat(cfg: ChatConfig, system: string, prompt: string): Prom
 async function* geminiStream(
   cfg: ChatConfig,
   system: string,
-  prompt: string
+  prompt: string,
+  history: ChatTurn[]
 ): AsyncGenerator<string> {
   const res = await postWithRetry(
     `${GEMINI_BASE}/${cfg.model}:streamGenerateContent?alt=sse&key=${geminiKey()}`,
     JSON_HEADERS,
-    geminiBody(system, prompt, cfg.maxTokens)
+    geminiBody(system, prompt, cfg.maxTokens, history)
   );
   if (!res.ok || !res.body) throw await geminiError(res);
 
@@ -189,13 +220,20 @@ function groqHeaders(): Record<string, string> {
   return { ...JSON_HEADERS, authorization: `Bearer ${process.env.GROQ_API_KEY ?? ""}` };
 }
 
-function groqBody(cfg: ChatConfig, system: string, prompt: string, stream: boolean): string {
+function groqBody(
+  cfg: ChatConfig,
+  system: string,
+  prompt: string,
+  stream: boolean,
+  history: ChatTurn[]
+): string {
   return JSON.stringify({
     model: cfg.model,
     max_tokens: cfg.maxTokens,
     stream,
     messages: [
       { role: "system", content: system },
+      ...history,
       { role: "user", content: prompt },
     ],
   });
@@ -212,8 +250,13 @@ async function groqError(res: Response): Promise<ProviderError> {
   return new ProviderError(message, res.status);
 }
 
-async function groqChat(cfg: ChatConfig, system: string, prompt: string): Promise<string> {
-  const res = await postWithRetry(GROQ_URL, groqHeaders(), groqBody(cfg, system, prompt, false));
+async function groqChat(
+  cfg: ChatConfig,
+  system: string,
+  prompt: string,
+  history: ChatTurn[]
+): Promise<string> {
+  const res = await postWithRetry(GROQ_URL, groqHeaders(), groqBody(cfg, system, prompt, false, history));
   if (!res.ok) throw await groqError(res);
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
@@ -224,9 +267,10 @@ async function groqChat(cfg: ChatConfig, system: string, prompt: string): Promis
 async function* groqStream(
   cfg: ChatConfig,
   system: string,
-  prompt: string
+  prompt: string,
+  history: ChatTurn[]
 ): AsyncGenerator<string> {
-  const res = await postWithRetry(GROQ_URL, groqHeaders(), groqBody(cfg, system, prompt, true));
+  const res = await postWithRetry(GROQ_URL, groqHeaders(), groqBody(cfg, system, prompt, true, history));
   if (!res.ok || !res.body) throw await groqError(res);
 
   const reader = res.body.getReader();

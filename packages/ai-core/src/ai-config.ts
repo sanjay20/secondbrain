@@ -54,3 +54,18 @@ export function getChatConfig(feature: AIFeature): ChatConfig {
   const f = FEATURES[feature];
   return { provider: AI_PROVIDER, model: f[AI_PROVIDER], maxTokens: f.maxTokens };
 }
+
+/**
+ * AI Coach conversation memory. Chat turns are always persisted to the DB, but
+ * how much prior context we *resend to the model* is controlled here to trade
+ * recall quality against token cost.
+ *
+ *   COACH_HISTORY_ENABLED=false   → single-turn (no prior context sent; cheapest)
+ *   COACH_HISTORY_MAX_TURNS=10    → only the most recent N messages are resent
+ *
+ * `maxTurns` counts individual messages (user + assistant), not exchange pairs.
+ */
+export const COACH_HISTORY = {
+  enabled: process.env.COACH_HISTORY_ENABLED !== "false",
+  maxTurns: Math.max(0, Number.parseInt(process.env.COACH_HISTORY_MAX_TURNS ?? "10", 10) || 10),
+};
