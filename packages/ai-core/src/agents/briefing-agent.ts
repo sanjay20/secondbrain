@@ -17,6 +17,11 @@ interface BriefingContext {
     status: string;
     dueDate?: string;
   }>;
+  tasks: Array<{
+    title: string;
+    priority: string;
+  }>;
+  mood: { score: number; note?: string } | null;
   todayDate: string;
 }
 
@@ -25,21 +30,12 @@ function getMockBriefing(ctx: BriefingContext): string {
     ? ctx.habits.map(h => `${h.name} (${h.streak}d streak)`).join(", ")
     : "No habits tracked yet";
 
-  const topGoal = ctx.goals[0]?.title || "No goals set";
+  const focus = ctx.tasks[0]?.title || ctx.goals[0]?.title || "no scheduled priorities";
+  const moodLine = ctx.mood
+    ? ` You logged a mood of ${ctx.mood.score}/10 today, so pace yourself accordingly.`
+    : "";
 
-  return `Good morning, ${ctx.userName}! 🌟
-
-${ctx.todayDate}
-
-**Your Daily Briefing:**
-
-You're building great momentum with your habits: ${habitSummary}. Keep the streak alive! 🔥
-
-Your top priority today is making progress on "${topGoal}". Even small steps count. Let's focus on what matters most.
-
-**Today's tip:** Start with your most important habit first thing in the morning. It sets the tone for everything else.
-
-You've got this! 💪`;
+  return `Good morning, ${ctx.userName}! 🌟 ${ctx.todayDate}. You're building momentum with your habits: ${habitSummary}. Today's main focus is "${focus}" — even small steps count.${moodLine} Tip: tackle your most important item first thing to set the tone for the day. You've got this! 💪`;
 }
 
 export async function generateDailyBriefing(ctx: BriefingContext): Promise<string> {
@@ -54,6 +50,14 @@ export async function generateDailyBriefing(ctx: BriefingContext): Promise<strin
       .map((g) => `- ${g.title}: ${g.progress}% complete${g.dueDate ? `, due ${g.dueDate}` : ""}`)
       .join("\n");
 
+    const taskSummary = ctx.tasks
+      .map((t) => `- ${t.title} (priority: ${t.priority})`)
+      .join("\n");
+
+    const moodSummary = ctx.mood
+      ? `Mood logged today: ${ctx.mood.score}/10${ctx.mood.note ? ` — "${ctx.mood.note}"` : ""}`
+      : "No mood logged today.";
+
     return await chat(
       getChatConfig("briefing"),
       SYSTEM_PROMPT_BASE,
@@ -65,12 +69,19 @@ ${habitSummary || "No habits tracked yet."}
 GOAL DATA:
 ${goalSummary || "No goals set yet."}
 
-Write a motivating, insightful morning briefing (3-4 short paragraphs).
-- Start with a warm greeting and date
-- Highlight key habit streaks or wins
-- Surface the most important goal to focus on today
-- End with one specific actionable tip for today
-- Keep it concise and energizing, not preachy`
+TASK DATA:
+${taskSummary || "No tasks scheduled for today."}
+
+MOOD DATA:
+${moodSummary}
+
+Write a warm, motivating morning briefing of 3-5 sentences (not paragraphs).
+- Greet ${ctx.userName} by first name and acknowledge the day
+- Highlight a key habit streak or win
+- Call out the top task or goal to focus on today
+- Optionally reference today's mood if one was logged
+- End with one specific, actionable tip
+- Keep it energizing, not preachy. Do not exceed 5 sentences.`
     );
   } catch (error) {
     console.log("[BRIEFING] API failed, using mock response:", error instanceof Error ? error.message : "Unknown error");
