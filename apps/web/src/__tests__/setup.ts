@@ -126,6 +126,10 @@ vi.mock("@/lib/db", () => ({
     },
     moodLog: {
       findMany: vi.fn(),
+      findFirst: vi.fn(),
+      upsert: vi.fn(),
+    },
+    aiBriefing: {
       upsert: vi.fn(),
     },
     gratitudeEntry: {
