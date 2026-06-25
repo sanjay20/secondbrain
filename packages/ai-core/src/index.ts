@@ -12,3 +12,5 @@ export { getJournalFollowups } from "./agents/journal-agent";
 export { getWealthInsights } from "./agents/wealth-agent";
 export { getDayPlan, getEndOfDaySummary } from "./agents/dayplan-agent";
 export { getVisionInsights } from "./agents/vision-agent";
+export { generateWeeklyReview } from "./agents/weekly-review-agent";
+export type { WeeklyReviewContext, WeeklyReviewOutput } from "./agents/weekly-review-agent";
