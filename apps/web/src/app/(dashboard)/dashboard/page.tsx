@@ -9,6 +9,7 @@ import { DailyBriefing } from "@/components/dashboard/daily-briefing";
 import { WeeklyReviewCard } from "@/components/dashboard/weekly-review-card";
 import { DailyAffirmation } from "@/components/dashboard/daily-affirmation";
 import type { WeeklyReviewOutput } from "@secondbrain/ai-core";
+import { GoalConflictCard } from "@/components/dashboard/goal-conflict-card";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { userDayRange } from "@/lib/datetime";
@@ -148,6 +149,7 @@ export default async function DashboardPage() {
           <div className="lg:col-span-2 space-y-6">
             <DailyBriefing initialBriefing={briefing} />
             <WeeklyReviewCard initialReview={weeklyReview} initialWeekLabel={weeklyReviewLabel} />
+            <GoalConflictCard activeGoalsCount={activeGoalsCount} />
           </div>
 
           <div className="space-y-4">
