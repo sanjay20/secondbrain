@@ -140,6 +140,15 @@ vi.mock("@/lib/db", () => ({
       findUnique: vi.fn(),
       upsert: vi.fn(),
     },
+    monthlyLifeScore: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      upsert: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
     milestone: {
       findMany: vi.fn(),
     },
