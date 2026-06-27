@@ -96,6 +96,26 @@ export function weekRange(
   return { gte: startUtc, lt: endUtc };
 }
 
+/**
+ * UTC half-open range [gte, lt) covering the calendar month that contains
+ * `date`, in the given timezone. Mirrors weekRange. Pass the first day of the
+ * target month (or any day within it) to scope month-windowed activity queries.
+ */
+export function monthRange(
+  date: Date,
+  tz?: string | null
+): { gte: Date; lt: Date } {
+  const zone = resolvedTz(tz);
+  const zoned = toZonedDate(date, zone);
+  zoned.setHours(0, 0, 0, 0);
+  zoned.setDate(1);
+  const startUtc = zonedToUtc(zoned, zone);
+  const endZoned = new Date(zoned);
+  endZoned.setMonth(endZoned.getMonth() + 1);
+  const endUtc = zonedToUtc(endZoned, zone);
+  return { gte: startUtc, lt: endUtc };
+}
+
 export function sameDayInTz(a: Date, b: Date, tz?: string | null): boolean {
   const zone = resolvedTz(tz);
   const az = toZonedDate(a, zone);
