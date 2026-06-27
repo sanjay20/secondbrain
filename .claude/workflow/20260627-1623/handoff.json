@@ -1,0 +1,9 @@
+{
+  "agent": "pr",
+  "status": "done",
+  "run_id": "20260627-1623",
+  "ticket": "SB-45",
+  "branch": "feature/SB-45-streak-nudges",
+  "next_agent": null,
+  "summary": "PR opened: https://github.com/sanjay20/secondbrain/pull/25"
+}

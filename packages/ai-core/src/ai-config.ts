@@ -18,6 +18,7 @@ export type AIFeature =
   | "habitSuggestion"
   | "careerInsight"
   | "careerCoach"
+  | "lifeAdvisor"
   | "knowledgeInsight"
   | "journalInsight"
   | "wealthInsight"
@@ -46,6 +47,7 @@ const FEATURES: Record<
   habitSuggestion: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 300 },
   careerInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 400 },
   careerCoach: { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
+  lifeAdvisor: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 900 },
   knowledgeInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
   journalInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
   wealthInsight:  { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1000 },
