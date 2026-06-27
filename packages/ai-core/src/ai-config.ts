@@ -24,7 +24,8 @@ export type AIFeature =
   | "dayplan"
   | "visionInsight"
   | "weeklyReview"
-  | "goalConflict";
+  | "goalConflict"
+  | "monthlyLifeScore";
 
 /**
  * Per-feature settings. Each feature lists the model to use for every provider
@@ -51,6 +52,7 @@ const FEATURES: Record<
   visionInsight:  { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 600 },
   weeklyReview:   { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1500 },
   goalConflict:   { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
+  monthlyLifeScore: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1200 },
 };
 
 /** Resolve the provider + model + token budget for a feature. */
