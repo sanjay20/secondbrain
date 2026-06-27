@@ -30,6 +30,7 @@ model User {
   aiBriefings         AiBriefing[]
   aiWeeklyReviews     AiWeeklyReview[]
   aiGoalConflict      AiGoalConflict?
+  monthlyLifeScores   MonthlyLifeScore[]
   wealthAccounts      WealthAccount[]
   transactions        Transaction[]
   investments         Investment[]
@@ -532,6 +533,24 @@ model AiGoalConflict {
   updatedAt DateTime @updatedAt
 
   @@map("ai_goal_conflicts")
+}
+
+// Monthly Life Score (SB-44): one AI-scored row per user per calendar month.
+// content holds { scores: [{ pillar, score, explanation }] }; the per-pillar
+// trend vs. the prior month is computed in the route, not stored.
+model MonthlyLifeScore {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year      Int
+  month     Int // 1–12
+  content   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, year, month])
+  @@index([userId])
+  @@map("monthly_life_scores")
 }
 
 // ─── AI COACH CHAT ───────────────────────────────────────────────────────────
