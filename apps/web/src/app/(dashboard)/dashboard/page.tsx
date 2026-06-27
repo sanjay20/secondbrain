@@ -10,9 +10,11 @@ import { WeeklyReviewCard } from "@/components/dashboard/weekly-review-card";
 import { DailyAffirmation } from "@/components/dashboard/daily-affirmation";
 import type { WeeklyReviewOutput } from "@secondbrain/ai-core";
 import { GoalConflictCard } from "@/components/dashboard/goal-conflict-card";
+import { MonthlyLifeScoreCard } from "@/components/dashboard/monthly-life-score-card";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { userDayRange } from "@/lib/datetime";
+import { readScores, isImmediatelyPrior, buildScorePayload } from "@/lib/monthly-score";
 
 async function getDashboardData() {
   const user = await getCurrentUser();
@@ -23,7 +25,7 @@ async function getDashboardData() {
 
   const dayRange = userDayRange(today, user.timezone ?? undefined);
 
-  const [habits, habitLogs, goals, briefing, todaysTasks, affirmationCount, weeklyReview] = await Promise.all([
+  const [habits, habitLogs, goals, briefing, todaysTasks, affirmationCount, weeklyReview, recentMonthlyScores] = await Promise.all([
     prisma.habit.findMany({ where: { userId: user.id, isActive: true } }),
     prisma.habitLog.findMany({
       where: { userId: user.id, date: today, completed: true },
@@ -49,7 +51,31 @@ async function getDashboardData() {
       where: { userId: user.id },
       orderBy: { weekStart: "desc" },
     }),
+    // Fetch the two most recent scored months in one query (no serial round-trip).
+    // The 2nd row is only used for trend if it's the *immediately* prior month.
+    prisma.monthlyLifeScore.findMany({
+      where: { userId: user.id },
+      orderBy: [{ year: "desc" }, { month: "desc" }],
+      take: 2,
+    }),
   ]);
+
+  const latestMonthlyScore = recentMonthlyScores[0] ?? null;
+  const priorMonthlyScore =
+    recentMonthlyScores[1] && latestMonthlyScore && isImmediatelyPrior(recentMonthlyScores[1], latestMonthlyScore)
+      ? recentMonthlyScores[1]
+      : null;
+
+  const latestScores = latestMonthlyScore ? readScores(latestMonthlyScore.content) : [];
+  const initialMonthlyScore =
+    latestMonthlyScore && latestScores.length > 0
+      ? buildScorePayload(
+          latestMonthlyScore.year,
+          latestMonthlyScore.month,
+          latestScores,
+          priorMonthlyScore ? readScores(priorMonthlyScore.content) : null
+        )
+      : null;
 
   const weeklyReviewLabel = weeklyReview
     ? `${format(weeklyReview.weekStart, "MMM d")}–${format(weeklyReview.weekEnd, "d, yyyy")}`
@@ -86,6 +112,7 @@ async function getDashboardData() {
     dailyAffirmation,
     weeklyReview: (weeklyReview?.content as WeeklyReviewOutput | undefined) ?? null,
     weeklyReviewLabel,
+    initialMonthlyScore,
   };
 }
 
@@ -104,7 +131,7 @@ export default async function DashboardPage() {
     redirect("/sign-in");
   }
 
-  const { user, habits, completedTodayCount, longestStreak, activeGoalsCount, completedGoalsCount, avgProgress, briefing, todaysTasks, isMonday: showWeeklyReviewPrompt, dailyAffirmation, weeklyReview, weeklyReviewLabel } = data;
+  const { user, habits, completedTodayCount, longestStreak, activeGoalsCount, completedGoalsCount, avgProgress, briefing, todaysTasks, isMonday: showWeeklyReviewPrompt, dailyAffirmation, weeklyReview, weeklyReviewLabel, initialMonthlyScore } = data;
 
   return (
     <div className="flex flex-col flex-1">
@@ -150,6 +177,7 @@ export default async function DashboardPage() {
             <DailyBriefing initialBriefing={briefing} />
             <WeeklyReviewCard initialReview={weeklyReview} initialWeekLabel={weeklyReviewLabel} />
             <GoalConflictCard activeGoalsCount={activeGoalsCount} />
+            <MonthlyLifeScoreCard initialScore={initialMonthlyScore} />
           </div>
 
           <div className="space-y-4">

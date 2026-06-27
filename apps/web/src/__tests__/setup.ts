@@ -20,7 +20,7 @@ vi.mock("@/lib/auth", () => ({
 // Mock Prisma client
 vi.mock("@/lib/db", () => ({
   prisma: {
-    journalEntry: { findFirst: vi.fn(), findMany: vi.fn() },
+    journalEntry: { findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn() },
     reminder: { upsert: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), delete: vi.fn() },
     user: { update: vi.fn(), findMany: vi.fn() },
     wealthAccount: {
@@ -42,6 +42,7 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn(),
       create: vi.fn(),
       delete: vi.fn(),
+      count: vi.fn(),
     },
     savingsGoal: {
       findMany: vi.fn(),
@@ -139,6 +140,15 @@ vi.mock("@/lib/db", () => ({
     aiGoalConflict: {
       findUnique: vi.fn(),
       upsert: vi.fn(),
+    },
+    monthlyLifeScore: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      upsert: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
     milestone: {
       findMany: vi.fn(),
