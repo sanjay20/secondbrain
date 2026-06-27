@@ -1,0 +1,9 @@
+{
+  "agent": "pr",
+  "status": "done",
+  "run_id": "20260627-1102",
+  "ticket": "SB-44",
+  "branch": "feature/SB-44-monthly-life-score",
+  "next_agent": null,
+  "summary": "PR opened: https://github.com/sanjay20/secondbrain/pull/24"
+}
