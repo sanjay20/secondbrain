@@ -29,6 +29,7 @@ model User {
   reminders           Reminder[]
   aiBriefings         AiBriefing[]
   aiWeeklyReviews     AiWeeklyReview[]
+  aiGoalConflict      AiGoalConflict?
   wealthAccounts      WealthAccount[]
   transactions        Transaction[]
   investments         Investment[]
@@ -516,6 +517,21 @@ model AiWeeklyReview {
   @@unique([userId, weekStart])
   @@index([userId])
   @@map("ai_weekly_reviews")
+}
+
+// Goal-conflict analysis is not date-bound, so we keep a single row per user.
+// The cache is invalidated when the goals change (inputHash) rather than purely
+// on time; updatedAt backs a coarse freshness backstop. See the goal-conflict route.
+model AiGoalConflict {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   Json
+  inputHash String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ai_goal_conflicts")
 }
 
 // ─── AI COACH CHAT ───────────────────────────────────────────────────────────

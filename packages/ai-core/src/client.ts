@@ -7,7 +7,7 @@ export const anthropic = new Anthropic({
 export const MODELS = {
   fast: "claude-haiku-4-5-20251001",
   smart: "claude-sonnet-4-6",
-  powerful: "claude-opus-4-7",
+  powerful: "claude-opus-4-8",
 } as const;
 
 // gemini-2.5-flash works on the free tier. gemini-2.5-pro / gemini-2.0-flash
