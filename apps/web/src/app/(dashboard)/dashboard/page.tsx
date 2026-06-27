@@ -11,59 +11,10 @@ import { DailyAffirmation } from "@/components/dashboard/daily-affirmation";
 import type { WeeklyReviewOutput } from "@secondbrain/ai-core";
 import { GoalConflictCard } from "@/components/dashboard/goal-conflict-card";
 import { MonthlyLifeScoreCard } from "@/components/dashboard/monthly-life-score-card";
-import type { MonthlyScorePayload } from "@/components/dashboard/monthly-life-score-card";
-import { LIFE_PILLARS } from "@secondbrain/ai-core";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { userDayRange } from "@/lib/datetime";
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-type StoredPillarScore = { pillar: string; score: number; explanation: string };
-
-function readStoredScores(content: unknown): StoredPillarScore[] {
-  if (content && typeof content === "object" && !Array.isArray(content)) {
-    const scores = (content as { scores?: unknown }).scores;
-    if (Array.isArray(scores)) return scores as StoredPillarScore[];
-  }
-  return [];
-}
-
-// Seed the card with the latest stored month plus its trend vs. the prior month,
-// matching the shape the API route returns (so the card needs no extra fetch).
-function buildInitialScore(
-  latest: { year: number; month: number; content: unknown } | null,
-  prior: { content: unknown } | null
-): MonthlyScorePayload | null {
-  if (!latest) return null;
-  const scores = readStoredScores(latest.content);
-  if (scores.length === 0) return null;
-  const priorScores = prior ? readStoredScores(prior.content) : null;
-  const priorByPillar = new Map(priorScores?.map((p) => [p.pillar, p.score]) ?? []);
-  const currentByPillar = new Map(scores.map((s) => [s.pillar, s.score]));
-  const trend = LIFE_PILLARS.map((pillar) => {
-    const cur = currentByPillar.get(pillar) ?? 0;
-    if (!priorScores || !priorByPillar.has(pillar)) {
-      return { pillar, delta: 0, direction: "none" as const };
-    }
-    const delta = cur - (priorByPillar.get(pillar) ?? 0);
-    return {
-      pillar,
-      delta,
-      direction: (delta > 0 ? "up" : delta < 0 ? "down" : "flat") as "up" | "down" | "flat",
-    };
-  });
-  return {
-    year: latest.year,
-    month: latest.month,
-    monthLabel: `${MONTH_NAMES[latest.month - 1]} ${latest.year}`,
-    scores,
-    trend,
-  };
-}
+import { readScores, isImmediatelyPrior, buildScorePayload } from "@/lib/monthly-score";
 
 async function getDashboardData() {
   const user = await getCurrentUser();
@@ -74,7 +25,7 @@ async function getDashboardData() {
 
   const dayRange = userDayRange(today, user.timezone ?? undefined);
 
-  const [habits, habitLogs, goals, briefing, todaysTasks, affirmationCount, weeklyReview, latestMonthlyScore] = await Promise.all([
+  const [habits, habitLogs, goals, briefing, todaysTasks, affirmationCount, weeklyReview, recentMonthlyScores] = await Promise.all([
     prisma.habit.findMany({ where: { userId: user.id, isActive: true } }),
     prisma.habitLog.findMany({
       where: { userId: user.id, date: today, completed: true },
@@ -100,26 +51,31 @@ async function getDashboardData() {
       where: { userId: user.id },
       orderBy: { weekStart: "desc" },
     }),
-    prisma.monthlyLifeScore.findFirst({
+    // Fetch the two most recent scored months in one query (no serial round-trip).
+    // The 2nd row is only used for trend if it's the *immediately* prior month.
+    prisma.monthlyLifeScore.findMany({
       where: { userId: user.id },
       orderBy: [{ year: "desc" }, { month: "desc" }],
+      take: 2,
     }),
   ]);
 
-  // Load the month immediately before the latest scored month for trend seeding.
-  const priorMonthlyScore = latestMonthlyScore
-    ? await prisma.monthlyLifeScore.findUnique({
-        where: {
-          userId_year_month: {
-            userId: user.id,
-            year: latestMonthlyScore.month === 1 ? latestMonthlyScore.year - 1 : latestMonthlyScore.year,
-            month: latestMonthlyScore.month === 1 ? 12 : latestMonthlyScore.month - 1,
-          },
-        },
-      })
-    : null;
+  const latestMonthlyScore = recentMonthlyScores[0] ?? null;
+  const priorMonthlyScore =
+    recentMonthlyScores[1] && latestMonthlyScore && isImmediatelyPrior(recentMonthlyScores[1], latestMonthlyScore)
+      ? recentMonthlyScores[1]
+      : null;
 
-  const initialMonthlyScore = buildInitialScore(latestMonthlyScore, priorMonthlyScore);
+  const latestScores = latestMonthlyScore ? readScores(latestMonthlyScore.content) : [];
+  const initialMonthlyScore =
+    latestMonthlyScore && latestScores.length > 0
+      ? buildScorePayload(
+          latestMonthlyScore.year,
+          latestMonthlyScore.month,
+          latestScores,
+          priorMonthlyScore ? readScores(priorMonthlyScore.content) : null
+        )
+      : null;
 
   const weeklyReviewLabel = weeklyReview
     ? `${format(weeklyReview.weekStart, "MMM d")}–${format(weeklyReview.weekEnd, "d, yyyy")}`

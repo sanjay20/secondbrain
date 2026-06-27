@@ -4,77 +4,24 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   generateMonthlyLifeScore,
-  LIFE_PILLARS,
   aiErrorMessage,
 } from "@secondbrain/ai-core";
 import type {
   MonthlyLifeScoreContext,
   MonthlyLifeScoreOutput,
   PillarScore,
-  LifePillar,
 } from "@secondbrain/ai-core";
 import { monthRange } from "@/lib/datetime";
+import {
+  MONTH_LABELS,
+  readScores,
+  priorMonth,
+  buildScorePayload,
+} from "@/lib/monthly-score";
 
 export const maxDuration = 60; // outlive the in-route 50s timeout so we control the 504
 
 const TIMEOUT = Symbol("timeout");
-
-const MONTH_LABELS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-type TrendDirection = "up" | "down" | "flat" | "none";
-
-interface PillarTrend {
-  pillar: LifePillar;
-  delta: number; // current − prior; 0 when no prior data
-  direction: TrendDirection;
-}
-
-interface ScorePayload {
-  year: number;
-  month: number;
-  monthLabel: string;
-  scores: PillarScore[];
-  trend: PillarTrend[];
-}
-
-// Reads {scores} out of a stored Json content blob defensively.
-function readScores(content: Prisma.JsonValue | null | undefined): PillarScore[] {
-  if (content && typeof content === "object" && !Array.isArray(content)) {
-    const scores = (content as { scores?: unknown }).scores;
-    if (Array.isArray(scores)) return scores as PillarScore[];
-  }
-  return [];
-}
-
-// Compute per-pillar trend by diffing the current scores against the prior
-// month's stored row. AC-3/AC-4: "none" direction when there is no prior data.
-function computeTrend(
-  current: PillarScore[],
-  prior: PillarScore[] | null
-): PillarTrend[] {
-  const priorByPillar = new Map<string, number>();
-  if (prior) for (const p of prior) priorByPillar.set(p.pillar, p.score);
-  const currentByPillar = new Map<string, number>();
-  for (const c of current) currentByPillar.set(c.pillar, c.score);
-
-  return LIFE_PILLARS.map((pillar) => {
-    const cur = currentByPillar.get(pillar) ?? 0;
-    if (!prior || !priorByPillar.has(pillar)) {
-      return { pillar, delta: 0, direction: "none" as TrendDirection };
-    }
-    const delta = cur - (priorByPillar.get(pillar) ?? 0);
-    const direction: TrendDirection = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
-    return { pillar, delta, direction };
-  });
-}
-
-// Previous calendar month (handles January → December rollover).
-function priorMonth(year: number, month: number): { year: number; month: number } {
-  return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
-}
 
 function clampMonth(n: unknown, fallback: number): number {
   const v = typeof n === "number" ? n : Number.parseInt(String(n ?? ""), 10);
@@ -290,13 +237,7 @@ export async function POST(req: Request) {
     });
 
     const prior = await loadPriorScores(user.id, year, month);
-    const payload: ScorePayload = {
-      year,
-      month,
-      monthLabel: context.monthLabel,
-      scores: output.scores,
-      trend: computeTrend(output.scores, prior),
-    };
+    const payload = buildScorePayload(year, month, output.scores, prior);
 
     return NextResponse.json({ score: payload, cached: false });
   } catch (err) {
@@ -337,13 +278,7 @@ export async function GET(req: Request) {
 
     const scores = readScores(row.content);
     const prior = await loadPriorScores(user.id, year, month);
-    const payload: ScorePayload = {
-      year,
-      month,
-      monthLabel: `${MONTH_LABELS[month - 1]} ${year}`,
-      scores,
-      trend: computeTrend(scores, prior),
-    };
+    const payload = buildScorePayload(year, month, scores, prior);
 
     return NextResponse.json({ score: payload });
   } catch (err) {
