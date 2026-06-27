@@ -10,6 +10,7 @@ import { WeeklyReviewCard } from "@/components/dashboard/weekly-review-card";
 import { DailyAffirmation } from "@/components/dashboard/daily-affirmation";
 import type { WeeklyReviewOutput } from "@secondbrain/ai-core";
 import { GoalConflictCard } from "@/components/dashboard/goal-conflict-card";
+import { StreakNudgeCard } from "@/components/dashboard/streak-nudge-card";
 import { MonthlyLifeScoreCard } from "@/components/dashboard/monthly-life-score-card";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -177,6 +178,7 @@ export default async function DashboardPage() {
             <DailyBriefing initialBriefing={briefing} />
             <WeeklyReviewCard initialReview={weeklyReview} initialWeekLabel={weeklyReviewLabel} />
             <GoalConflictCard activeGoalsCount={activeGoalsCount} />
+            <StreakNudgeCard />
             <MonthlyLifeScoreCard initialScore={initialMonthlyScore} />
           </div>
 

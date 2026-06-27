@@ -16,5 +16,7 @@ export { generateWeeklyReview } from "./agents/weekly-review-agent";
 export type { WeeklyReviewContext, WeeklyReviewOutput } from "./agents/weekly-review-agent";
 export { generateGoalConflictReport } from "./agents/goal-conflict-agent";
 export type { GoalConflictContext, GoalConflictOutput, ConflictItem, ConflictSeverity } from "./agents/goal-conflict-agent";
+export { generateStreakNudge } from "./agents/nudge-agent";
+export type { NudgeContext, NudgeOutput, NudgeHabit } from "./agents/nudge-agent";
 export { generateMonthlyLifeScore, LIFE_PILLARS } from "./agents/monthly-life-score-agent";
 export type { MonthlyLifeScoreContext, MonthlyLifeScoreOutput, PillarScore, LifePillar } from "./agents/monthly-life-score-agent";

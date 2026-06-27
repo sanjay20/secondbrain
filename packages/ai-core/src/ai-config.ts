@@ -25,6 +25,7 @@ export type AIFeature =
   | "visionInsight"
   | "weeklyReview"
   | "goalConflict"
+  | "streakNudge"
   | "monthlyLifeScore";
 
 /**
@@ -52,6 +53,7 @@ const FEATURES: Record<
   visionInsight:  { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 600 },
   weeklyReview:   { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1500 },
   goalConflict:   { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
+  streakNudge:    { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 400 },
   monthlyLifeScore: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1200 },
 };
 
