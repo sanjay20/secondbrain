@@ -13,6 +13,7 @@ import {
   monthLabelFor,
 } from "@/lib/monthly-score";
 import { LIFE_PILLARS } from "@secondbrain/ai-core";
+import type { PillarScore } from "@secondbrain/ai-core";
 
 const scoresAll = (val: number) =>
   LIFE_PILLARS.map((pillar) => ({ pillar, score: val, explanation: "x" }));
@@ -54,12 +55,12 @@ describe("computeTrend", () => {
     expect(trend.every((t) => t.direction === "none" && t.delta === 0)).toBe(true);
   });
   it("computes up/down/flat deltas vs prior (AC-3)", () => {
-    const current = [
+    const current: PillarScore[] = [
       { pillar: "career", score: 8, explanation: "" },
       { pillar: "health", score: 4, explanation: "" },
       { pillar: "wealth", score: 5, explanation: "" },
     ];
-    const prior = [
+    const prior: PillarScore[] = [
       { pillar: "career", score: 6, explanation: "" },
       { pillar: "health", score: 7, explanation: "" },
       { pillar: "wealth", score: 5, explanation: "" },
@@ -71,8 +72,8 @@ describe("computeTrend", () => {
   });
   it("treats a pillar missing from prior as 'none'", () => {
     const trend = computeTrend(
-      [{ pillar: "career", score: 8, explanation: "" }],
-      [{ pillar: "health", score: 7, explanation: "" }]
+      [{ pillar: "career", score: 8, explanation: "" }] as PillarScore[],
+      [{ pillar: "health", score: 7, explanation: "" }] as PillarScore[]
     );
     const career = trend.find((t) => t.pillar === "career");
     expect(career).toMatchObject({ direction: "none", delta: 0 });
