@@ -23,7 +23,13 @@ function stripActions(content: string): string {
 
 /** Hydrate the UI on mount with the user's most recent conversation. */
 export async function GET() {
-  const user = await requireUser();
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const conversation = await prisma.coachConversation.findFirst({
     where: { userId: user.id },
     orderBy: { updatedAt: "desc" },
@@ -38,7 +44,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const user = await requireUser();
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { message, conversationId } = (await req.json()) as {
     message: string;
     conversationId?: string;

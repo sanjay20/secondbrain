@@ -10,6 +10,7 @@
  *   - GET: null conversation → conversationId null + empty messages[]
  *   - GET: existing conversation → conversationId + mapped messages
  *   - GET: scoped to authenticated userId
+ *   - GET: 401 when requireUser throws
  *   - POST: creates a conversation when none exists
  *   - POST: reuses an existing conversation when conversationId provided
  *   - POST: runs habit.findMany with isActive:true scoped to userId
@@ -193,6 +194,14 @@ describe("GET /api/ai/chat", () => {
     const call = db.coachConversation.findFirst.mock.calls[0][0];
     expect(call.where.userId).toBe("user-1");
   });
+
+  it("returns 401 when requireUser rejects", async () => {
+    mockRequireUser.mockRejectedValue(new Error("Unauthorized"));
+    const res = await GET();
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "Unauthorized" });
+    expect(db.coachConversation.findFirst).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST /api/ai/chat", () => {
@@ -206,19 +215,20 @@ describe("POST /api/ai/chat", () => {
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   //
-  // The chat route does NOT catch requireUser errors (unlike goal-conflict which
-  // wraps in try/catch for a 401 response). Instead, the error propagates — Next.js
-  // catches it at the framework level. We verify the error throws and that no DB
-  // queries are made after auth failure.
+  // The chat route catches requireUser errors and returns 401, matching the
+  // security-reviewed sibling routes (goal-conflict, streak-nudge, monthly-life-score).
+  // We verify the 401 response and that no DB queries run after auth failure.
 
-  it("throws when requireUser rejects (auth guard propagates)", async () => {
+  it("returns 401 when requireUser rejects", async () => {
     mockRequireUser.mockRejectedValue(new Error("Unauthorized"));
-    await expect(POST(makePostRequest({ message: "Hello" }))).rejects.toThrow("Unauthorized");
+    const res = await POST(makePostRequest({ message: "Hello" }));
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "Unauthorized" });
   });
 
   it("does not call habit.findMany when unauthenticated", async () => {
     mockRequireUser.mockRejectedValue(new Error("Unauthorized"));
-    await POST(makePostRequest({ message: "Hello" })).catch(() => {});
+    await POST(makePostRequest({ message: "Hello" }));
     expect(db.habit.findMany).not.toHaveBeenCalled();
   });
 
