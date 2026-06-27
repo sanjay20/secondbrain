@@ -136,6 +136,10 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn(),
       upsert: vi.fn(),
     },
+    aiGoalConflict: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    },
     milestone: {
       findMany: vi.fn(),
     },

@@ -21,6 +21,8 @@ export function GoalConflictCard({ activeGoalsCount }: GoalConflictCardProps) {
   const [report, setReport] = useState<GoalConflictOutput | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Both the mount load and the refresh button respect the server-side 3h
+  // cache — the AI only re-runs once the cached report is stale.
   async function load() {
     setLoading(true);
     try {
@@ -57,7 +59,7 @@ export function GoalConflictCard({ activeGoalsCount }: GoalConflictCardProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={load}
+          onClick={() => load()}
           disabled={loading}
           className="text-muted-foreground"
           title="Refresh"
@@ -125,7 +127,7 @@ export function GoalConflictCard({ activeGoalsCount }: GoalConflictCardProps) {
           <p className="text-sm text-muted-foreground text-center">
             Check your active goals for time and energy conflicts.
           </p>
-          <Button onClick={load} disabled={loading} size="sm">
+          <Button onClick={() => load()} disabled={loading} size="sm">
             {loading ? "Analyzing..." : "Check goals"}
           </Button>
         </div>

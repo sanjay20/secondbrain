@@ -50,7 +50,7 @@ const FEATURES: Record<
   dayplan:        { anthropic: MODELS.fast,  gemini: GEMINI_MODELS.fast,  groq: GROQ_MODELS.fast,  maxTokens: 600 },
   visionInsight:  { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 600 },
   weeklyReview:   { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1500 },
-  goalConflict:   { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
+  goalConflict:   { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
 };
 
 /** Resolve the provider + model + token budget for a feature. */
