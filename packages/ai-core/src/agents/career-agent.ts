@@ -3,7 +3,7 @@ import { getChatConfig } from "../ai-config";
 import { chat, streamChat, type ChatTurn } from "../provider";
 import { shouldMockAI } from "../shared";
 
-interface CareerContext {
+export interface CareerContext {
   goals: Array<{
     title: string;
     category: string;
@@ -12,6 +12,15 @@ interface CareerContext {
   }>;
   skills: Array<{ name: string; level: number; category: string }>;
   journal?: Array<{ content: string; category: string; when: string }>;
+}
+
+export interface LifeContext extends CareerContext {
+  habits?: Array<{
+    name: string;
+    category: string;
+    frequency: string; // "daily" | "weekly"
+    completedLast7Days: number; // count of completed HabitLogs in the last 7 days
+  }>;
 }
 
 function getMockCareerInsight(ctx: CareerContext): string {
@@ -28,11 +37,13 @@ _(Mock response — set MOCK_AI=false and add Anthropic credits for live insight
 
 function getMockCoachReply(userMessage: string): string {
   const topic = userMessage.trim().slice(0, 80);
-  return `Here's how I'd approach that:
+  return `Here's how I'd approach that as your life advisor:
 
-1. Clarify the single outcome you want from "${topic}".
-2. Break it into one small action you can finish today.
-3. Tie it back to an existing goal or habit so it sticks.
+1. Clarify the single outcome you want from "${topic}" across your pillars (career, health & habits, knowledge, wealth).
+2. Connect it to your habits — small daily wins compound — and to one of your existing goals so it sticks.
+3. Pick one concrete action you can finish today, then level up a relevant skill to support it.
+
+A cross-pillar suggestion: pair the goal with a supporting daily habit so progress is automatic.
 
 What feels like the most important first step?
 
@@ -65,9 +76,9 @@ Provide: 1) one thing going well, 2) one skill gap to address, 3) one concrete n
   );
 }
 
-export async function* streamCareerCoach(
+export async function* streamLifeAdvisor(
   userMessage: string,
-  ctx: CareerContext,
+  ctx: LifeContext,
   history: ChatTurn[] = []
 ): AsyncGenerator<string> {
   if (shouldMockAI()) {
@@ -79,19 +90,29 @@ export async function* streamCareerCoach(
 
   const goalData = ctx.goals.map((g) => `${g.title}: ${g.progress}%`).join(", ");
   const skillData = ctx.skills.map((s) => `${s.name} (L${s.level})`).join(", ");
+  const habitData = (ctx.habits ?? [])
+    .map((h) => `- ${h.name} (${h.category}, ${h.frequency}): ${h.completedLast7Days}/7 days done last week`)
+    .join("\n");
   const journalData = (ctx.journal ?? [])
     .map((j) => `- [${j.when}] (${j.category}) ${j.content}`)
     .join("\n");
 
   const system = `${SYSTEM_PROMPT_BASE}
 
+You are a holistic life advisor spanning all of the user's life pillars — Career, Health & Habits, Knowledge, and Wealth. Reason across pillars: correlate their habits, goals, skills, and journal so your guidance reflects the whole person, not a single area. When useful, point out how progress (or slippage) in one pillar affects another.
+
+User's habits (Health & Habits pillar):
+${habitData || "none tracked"}
 User's current goals: ${goalData || "none yet"}
 User's skills: ${skillData || "none tracked"}
 ${journalData ? `\nRecent journal events (most recent first):\n${journalData}\n` : ""}
 ${ACTION_PROTOCOL}`;
 
-  yield* streamChat(getChatConfig("careerCoach"), system, userMessage, history);
+  yield* streamChat(getChatConfig("lifeAdvisor"), system, userMessage, history);
 }
+
+// Backward-compatible alias — same signature shape; LifeContext extends CareerContext (NFR-5).
+export const streamCareerCoach = streamLifeAdvisor;
 
 const ACTION_PROTOCOL = `## Taking actions in the app
 You can add items to the user's app on their behalf: habits (Health & Habits), goals (Career or Knowledge), and skills.
