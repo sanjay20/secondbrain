@@ -114,11 +114,11 @@ async function runAction(a: CoachAction): Promise<boolean> {
 }
 
 const SUGGESTED_PROMPTS = [
+  "How are my habits affecting my career goals?",
+  "Give me a cross-pillar health check across all my pillars",
   "Suggest 5 habits to improve my diet, then add them",
-  "What should I focus on today based on my habits?",
   "Help me break down my top career goal into steps",
-  "Give me 3 learning goals for personal finance and add them",
-  "Create a weekly plan to improve my health habits",
+  "What should I focus on this week across all areas?",
 ];
 
 export default function AICoachPage() {

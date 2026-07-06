@@ -2,7 +2,7 @@ import { formatDistanceToNow } from "date-fns";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
-  streamCareerCoach,
+  streamLifeAdvisor,
   aiErrorMessage,
   COACH_HISTORY,
   type ChatTurn,
@@ -23,7 +23,13 @@ function stripActions(content: string): string {
 
 /** Hydrate the UI on mount with the user's most recent conversation. */
 export async function GET() {
-  const user = await requireUser();
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const conversation = await prisma.coachConversation.findFirst({
     where: { userId: user.id },
     orderBy: { updatedAt: "desc" },
@@ -38,7 +44,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const user = await requireUser();
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { message, conversationId } = (await req.json()) as {
     message: string;
     conversationId?: string;
@@ -78,11 +90,24 @@ export async function POST(req: Request) {
     data: { conversationId: conversation.id, userId: user.id, role: "user", content: message },
   });
 
-  const [goals, skills, journal] = await Promise.all([
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const [goals, skills, journal, habits, habitLogs] = await Promise.all([
     prisma.goal.findMany({ where: { userId: user.id, status: "active" }, take: 10 }),
     prisma.skill.findMany({ where: { userId: user.id }, take: 20 }),
     prisma.journalEntry.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 12 }),
+    prisma.habit.findMany({ where: { userId: user.id, isActive: true }, orderBy: { updatedAt: "desc" }, take: 20 }),
+    prisma.habitLog.findMany({
+      where: { userId: user.id, completed: true, date: { gte: sevenDaysAgo } },
+      select: { habitId: true },
+    }),
   ]);
+
+  const logCounts = habitLogs.reduce<Record<string, number>>((acc, l) => {
+    acc[l.habitId] = (acc[l.habitId] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const convId = conversation.id;
   const encoder = new TextEncoder();
@@ -91,7 +116,7 @@ export async function POST(req: Request) {
     async start(controller) {
       let full = "";
       try {
-        const generator = streamCareerCoach(
+        const generator = streamLifeAdvisor(
           message,
           {
             goals: goals.map((g) => ({ title: g.title, category: g.category, progress: g.progress, status: g.status })),
@@ -100,6 +125,12 @@ export async function POST(req: Request) {
               content: j.content,
               category: j.category,
               when: formatDistanceToNow(j.createdAt, { addSuffix: true }),
+            })),
+            habits: habits.map((h) => ({
+              name: h.name,
+              category: h.category,
+              frequency: h.frequency,
+              completedLast7Days: logCounts[h.id] ?? 0,
             })),
           },
           history
