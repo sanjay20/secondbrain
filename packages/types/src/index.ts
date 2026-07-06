@@ -44,6 +44,32 @@ export interface Workout {
   createdAt: Date | string;
 }
 
+export const SLEEP_NOTE_MAX_LEN = 500;
+export const SLEEP_PAGE_LIMIT = 20;
+export const SLEEP_QUALITY_MIN = 1;
+export const SLEEP_QUALITY_MAX = 5;
+
+export interface SleepLog {
+  id: string;
+  userId: string;
+  startTime: Date | string;
+  endTime: Date | string;
+  quality?: number | null;
+  note?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export function sleepDurationMinutes(start: Date | string, end: Date | string): number {
+  return Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000));
+}
+
+export function formatDuration(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}h ${m}m`;
+}
+
 export type HabitFrequency = "daily" | "weekly";
 export type HabitCategory = "health" | "fitness" | "mindfulness" | "learning" | "productivity" | "social" | "general";
 
