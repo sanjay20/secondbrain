@@ -50,6 +50,7 @@ model User {
   affirmations        Affirmation[]
   coachConversations  CoachConversation[]
   coachMessages       CoachMessage[]
+  notes               Note[]
 
   @@map("users")
 }
@@ -597,4 +598,20 @@ model CoachMessage {
 
   @@index([conversationId, createdAt])
   @@map("coach_messages")
+}
+
+// ─── KNOWLEDGE / NOTES ─────────────────────────────────────────────────────────
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  pillar    String   @default("knowledge")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, pillar])
+  @@map("notes")
 }
