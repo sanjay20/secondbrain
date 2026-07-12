@@ -51,6 +51,8 @@ model User {
   coachConversations  CoachConversation[]
   coachMessages       CoachMessage[]
   notes               Note[]
+  readingItems        ReadingItem[]
+  highlights          Highlight[]
 
   @@map("users")
 }
@@ -614,4 +616,35 @@ model Note {
   @@index([userId])
   @@index([userId, pillar])
   @@map("notes")
+}
+
+model ReadingItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  author    String?
+  type      String   @default("book")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  highlights Highlight[]
+
+  @@unique([userId, title])
+  @@index([userId])
+  @@map("reading_items")
+}
+
+model Highlight {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readingItemId String
+  readingItem   ReadingItem @relation(fields: [readingItemId], references: [id], onDelete: Cascade)
+  text          String
+  createdAt     DateTime    @default(now())
+
+  @@index([userId, createdAt])
+  @@index([readingItemId])
+  @@map("highlights")
 }
