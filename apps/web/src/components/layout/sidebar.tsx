@@ -9,6 +9,7 @@ import {
   Repeat,
   Briefcase,
   BookOpen,
+  StickyNote,
   NotebookPen,
   Sparkles,
   Settings,
@@ -49,6 +50,12 @@ const navItems = [
     href: "/knowledge",
     icon: BookOpen,
     color: "text-pink-400",
+  },
+  {
+    label: "Notes",
+    href: "/notes",
+    icon: StickyNote,
+    color: "text-amber-400",
   },
   {
     label: "Journal",
