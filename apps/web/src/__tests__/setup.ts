@@ -74,6 +74,14 @@ vi.mock("@/lib/db", () => ({
     habitLog: { findMany: vi.fn() },
     coachConversation: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     coachMessage: { findMany: vi.fn(), create: vi.fn() },
+    note: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
+    },
     goal: { findMany: vi.fn() },
     skill: {
       findMany: vi.fn(),
