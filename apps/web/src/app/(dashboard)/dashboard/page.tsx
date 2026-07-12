@@ -12,6 +12,7 @@ import type { WeeklyReviewOutput } from "@secondbrain/ai-core";
 import { GoalConflictCard } from "@/components/dashboard/goal-conflict-card";
 import { StreakNudgeCard } from "@/components/dashboard/streak-nudge-card";
 import { MonthlyLifeScoreCard } from "@/components/dashboard/monthly-life-score-card";
+import { HighlightRecapCard } from "@/components/dashboard/highlight-recap-card";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { userDayRange } from "@/lib/datetime";
@@ -179,6 +180,7 @@ export default async function DashboardPage() {
             <WeeklyReviewCard initialReview={weeklyReview} initialWeekLabel={weeklyReviewLabel} />
             <GoalConflictCard activeGoalsCount={activeGoalsCount} />
             <StreakNudgeCard />
+            <HighlightRecapCard />
             <MonthlyLifeScoreCard initialScore={initialMonthlyScore} />
           </div>
 
