@@ -82,6 +82,21 @@ vi.mock("@/lib/db", () => ({
       delete: vi.fn(),
       count: vi.fn(),
     },
+    readingItem: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      upsert: vi.fn(),
+      delete: vi.fn(),
+    },
+    highlight: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
+    },
     goal: { findMany: vi.fn() },
     skill: {
       findMany: vi.fn(),

@@ -465,3 +465,40 @@ export interface Note {
   createdAt: Date | string;
   updatedAt: Date | string;
 }
+
+// ─── Highlight types ─────────────────────────────────────────────────────────
+
+export const HIGHLIGHT_TEXT_MAX_LEN = 2000;
+export const READING_TYPES = ["book", "article"] as const;
+export type ReadingType = (typeof READING_TYPES)[number];
+
+export interface ReadingItem {
+  id: string;
+  userId: string;
+  title: string;
+  author?: string | null;
+  type: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface Highlight {
+  id: string;
+  userId: string;
+  readingItemId: string;
+  text: string;
+  createdAt: Date | string;
+  readingItem?: Pick<ReadingItem, "id" | "title" | "author" | "type">;
+}
+
+export interface HighlightRecap {
+  count: number;
+  weekStart: Date | string;
+  items: Array<{
+    id: string;
+    text: string;
+    sourceTitle: string;
+    sourceAuthor?: string | null;
+    createdAt: Date | string;
+  }>;
+}
