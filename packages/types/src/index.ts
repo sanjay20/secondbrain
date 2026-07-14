@@ -449,3 +449,19 @@ export interface DashboardStats {
   completedGoals: number;
   avgGoalProgress: number;
 }
+
+// ─── Note types ────────────────────────────────────────────────────────────────
+
+export const NOTE_PILLARS = ["health", "career", "wealth", "knowledge"] as const;
+export type NotePillar = (typeof NOTE_PILLARS)[number];
+export const NOTE_CONTENT_MAX_LEN = 2000;
+export const NOTE_PAGE_LIMIT = 100;
+
+export interface Note {
+  id: string;
+  userId: string;
+  content: string;
+  pillar: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
