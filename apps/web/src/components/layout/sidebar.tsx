@@ -16,6 +16,7 @@ import {
   ChevronRight,
   ListTodo,
   Compass,
+  MessagesSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav";
@@ -86,6 +87,12 @@ const navItems = [
     href: "/ai-coach",
     icon: Sparkles,
     color: "text-violet-400",
+  },
+  {
+    label: "Knowledge Q&A",
+    href: "/knowledge-qa",
+    icon: MessagesSquare,
+    color: "text-pink-400",
   },
 ];
 
