@@ -1,3 +1,4 @@
+import type Anthropic from "@anthropic-ai/sdk";
 import { anthropic } from "./client";
 
 export type AIProvider = "anthropic" | "gemini" | "groq";
@@ -6,6 +7,15 @@ export interface ChatConfig {
   provider: AIProvider;
   model: string;
   maxTokens: number;
+  /**
+   * Anthropic prompt caching. When true, the system prompt is sent as a cached
+   * block so repeated calls with an identical prefix (e.g. every turn of a
+   * multi-turn chat) reuse it at ~0.1x cost instead of full price. No-op for
+   * gemini/groq (they don't share this mechanism) and for prefixes below the
+   * model's minimum cacheable size (Opus 4.8: 4096 tokens — caches silently
+   * won't fire under that; check the logged read count to confirm).
+   */
+  cache?: boolean;
 }
 
 /** A prior conversation turn to resend to the model for multi-turn context. */
@@ -88,6 +98,40 @@ export async function* streamChat(
 
 // ---------- Anthropic ----------
 
+type AnthropicSystem = Anthropic.MessageCreateParams["system"];
+
+/**
+ * System prompt shaped for the request. With caching on, it's a single text
+ * block carrying a `cache_control` breakpoint (prefix = system, since there
+ * are no tools) so the whole prompt is cached after the first call.
+ *
+ * Prompt caching is GA on /v1/messages at runtime, but the pinned SDK (0.32.1)
+ * predates `cache_control` on the stable TextBlockParam type — the field is sent
+ * verbatim in the request body, so we assert past the stale type. Drop the cast
+ * once @anthropic-ai/sdk is upgraded (caching is fully typed in current versions).
+ */
+function anthropicSystem(system: string, cache?: boolean): AnthropicSystem {
+  if (!cache) return system;
+  return [
+    { type: "text", text: system, cache_control: { type: "ephemeral" } },
+  ] as unknown as AnthropicSystem;
+}
+
+/** One greppable line so you can confirm caching actually fires. */
+function logCacheUsage(
+  where: string,
+  usage: {
+    input_tokens: number;
+    cache_read_input_tokens?: number | null;
+    cache_creation_input_tokens?: number | null;
+  }
+): void {
+  console.log(
+    `[anthropic cache ${where}] read=${usage.cache_read_input_tokens ?? 0} ` +
+      `write=${usage.cache_creation_input_tokens ?? 0} uncached=${usage.input_tokens}`
+  );
+}
+
 async function anthropicChat(
   cfg: ChatConfig,
   system: string,
@@ -97,9 +141,10 @@ async function anthropicChat(
   const message = await anthropic.messages.create({
     model: cfg.model,
     max_tokens: cfg.maxTokens,
-    system,
+    system: anthropicSystem(system, cfg.cache),
     messages: [...history, { role: "user", content: prompt }],
   });
+  if (cfg.cache) logCacheUsage("chat", message.usage);
   return (message.content[0] as { type: string; text: string }).text;
 }
 
@@ -113,10 +158,14 @@ async function* anthropicStream(
     model: cfg.model,
     max_tokens: cfg.maxTokens,
     stream: true,
-    system,
+    system: anthropicSystem(system, cfg.cache),
     messages: [...history, { role: "user", content: prompt }],
   });
   for await (const event of stream) {
+    // Cache read/write counts are populated on message_start.
+    if (event.type === "message_start" && cfg.cache) {
+      logCacheUsage("stream", event.message.usage);
+    }
     if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
       yield event.delta.text;
     }

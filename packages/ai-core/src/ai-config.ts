@@ -41,15 +41,20 @@ export type AIFeature =
  */
 const FEATURES: Record<
   AIFeature,
-  { anthropic: string; gemini: string; groq: string; maxTokens: number }
+  { anthropic: string; gemini: string; groq: string; maxTokens: number; cache?: boolean }
 > = {
   briefing: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 600 },
   healthInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 400 },
   habitSuggestion: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 300 },
   careerInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 400 },
   careerCoach: { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
-  lifeAdvisor: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 900 },
-  knowledgeQA: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 900 },
+  // cache: this is a multi-turn chat — every turn re-sends the same large
+  // system prompt (base + advisor instructions + context + ACTION_PROTOCOL), so
+  // caching it pays off. One-shot features below don't reuse a prefix — leave off.
+  lifeAdvisor: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 900, cache: true },
+  // knowledgeQA follows the same pattern: multi-turn Q&A that re-sends a large
+  // notes/highlights context prefix each turn, so caching pays off here too.
+  knowledgeQA: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 900, cache: true },
   knowledgeInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
   journalInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
   wealthInsight:  { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1000 },
@@ -64,7 +69,7 @@ const FEATURES: Record<
 /** Resolve the provider + model + token budget for a feature. */
 export function getChatConfig(feature: AIFeature): ChatConfig {
   const f = FEATURES[feature];
-  return { provider: AI_PROVIDER, model: f[AI_PROVIDER], maxTokens: f.maxTokens };
+  return { provider: AI_PROVIDER, model: f[AI_PROVIDER], maxTokens: f.maxTokens, cache: f.cache };
 }
 
 /**
