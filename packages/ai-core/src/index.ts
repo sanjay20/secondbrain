@@ -1,5 +1,5 @@
 export { anthropic, MODELS, GEMINI_MODELS, GROQ_MODELS, SYSTEM_PROMPT_BASE } from "./client";
-export { AI_PROVIDER, getChatConfig, COACH_HISTORY } from "./ai-config";
+export { AI_PROVIDER, getChatConfig, COACH_HISTORY, KNOWLEDGE_QA_HISTORY } from "./ai-config";
 export type { AIFeature } from "./ai-config";
 export { chat, streamChat } from "./provider";
 export type { AIProvider, ChatConfig, ChatTurn } from "./provider";
@@ -8,6 +8,8 @@ export { generateDailyBriefing } from "./agents/briefing-agent";
 export { getHabitInsights, suggestHabits } from "./agents/health-agent";
 export { getCareerInsights, streamCareerCoach, streamLifeAdvisor } from "./agents/career-agent";
 export type { LifeContext } from "./agents/career-agent";
+export { streamKnowledgeQA } from "./agents/knowledge-qa-agent";
+export type { KnowledgeQAContext } from "./agents/knowledge-qa-agent";
 export { getKnowledgeRecommendations } from "./agents/knowledge-agent";
 export { getJournalFollowups } from "./agents/journal-agent";
 export { getWealthInsights } from "./agents/wealth-agent";

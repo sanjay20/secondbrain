@@ -19,6 +19,7 @@ export type AIFeature =
   | "careerInsight"
   | "careerCoach"
   | "lifeAdvisor"
+  | "knowledgeQA"
   | "knowledgeInsight"
   | "journalInsight"
   | "wealthInsight"
@@ -48,6 +49,7 @@ const FEATURES: Record<
   careerInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 400 },
   careerCoach: { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
   lifeAdvisor: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 900 },
+  knowledgeQA: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 900 },
   knowledgeInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
   journalInsight: { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.smart, maxTokens: 800 },
   wealthInsight:  { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1000 },
@@ -78,4 +80,14 @@ export function getChatConfig(feature: AIFeature): ChatConfig {
 export const COACH_HISTORY = {
   enabled: process.env.COACH_HISTORY_ENABLED !== "false",
   maxTurns: Math.max(0, Number.parseInt(process.env.COACH_HISTORY_MAX_TURNS ?? "10", 10) || 10),
+};
+
+/**
+ * Knowledge Q&A conversation memory — same gating semantics as COACH_HISTORY
+ * (turns always persisted; this only controls how much prior context is resent
+ * to the model). Env: KNOWLEDGE_QA_HISTORY_ENABLED / KNOWLEDGE_QA_HISTORY_MAX_TURNS.
+ */
+export const KNOWLEDGE_QA_HISTORY = {
+  enabled: process.env.KNOWLEDGE_QA_HISTORY_ENABLED !== "false",
+  maxTurns: Math.max(0, Number.parseInt(process.env.KNOWLEDGE_QA_HISTORY_MAX_TURNS ?? "10", 10) || 10),
 };
