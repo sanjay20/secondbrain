@@ -51,6 +51,10 @@ model User {
   coachConversations  CoachConversation[]
   coachMessages       CoachMessage[]
   notes               Note[]
+  readingItems        ReadingItem[]
+  highlights          Highlight[]
+  knowledgeConversations KnowledgeConversation[]
+  knowledgeMessages      KnowledgeMessage[]
 
   @@map("users")
 }
@@ -614,4 +618,66 @@ model Note {
   @@index([userId])
   @@index([userId, pillar])
   @@map("notes")
+}
+
+model ReadingItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  author    String?
+  type      String   @default("book")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  highlights Highlight[]
+
+  @@unique([userId, title])
+  @@index([userId])
+  @@map("reading_items")
+}
+
+model Highlight {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readingItemId String
+  readingItem   ReadingItem @relation(fields: [readingItemId], references: [id], onDelete: Cascade)
+  text          String
+  createdAt     DateTime    @default(now())
+
+  @@index([userId, createdAt])
+  @@index([readingItemId])
+  @@map("highlights")
+}
+
+// ─── KNOWLEDGE Q&A CHAT ────────────────────────────────────────────────────────
+
+model KnowledgeConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages  KnowledgeMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("knowledge_conversations")
+}
+
+model KnowledgeMessage {
+  id             String                @id @default(cuid())
+  conversationId String
+  conversation   KnowledgeConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String // "user" | "assistant"
+  content        String
+  sources        String? // JSON string of cited note/highlight refs
+  createdAt      DateTime              @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("knowledge_messages")
 }

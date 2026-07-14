@@ -7,12 +7,14 @@ import { Header } from "@/components/layout/header";
 import { GoalCard } from "@/components/career/goal-card";
 import { GoalForm } from "@/components/career/goal-form";
 import { SkillBadge } from "@/components/career/skill-badge";
+import { HighlightForm } from "@/components/knowledge/highlight-form";
+import { HighlightList } from "@/components/knowledge/highlight-list";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Goal, Skill } from "@secondbrain/types";
+import type { Goal, Skill, Highlight } from "@secondbrain/types";
 
 const KNOWLEDGE_CATEGORIES = [
   { value: "technical", label: "Technical", icon: "💻" },
@@ -30,6 +32,7 @@ const categoryMeta = (value: string) =>
 export default function KnowledgePage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -41,12 +44,14 @@ export default function KnowledgePage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [goalsRes, skillsRes] = await Promise.all([
+      const [goalsRes, skillsRes, highlightsRes] = await Promise.all([
         fetch("/api/goals?area=knowledge"),
         fetch("/api/skills?area=knowledge"),
+        fetch("/api/highlights"),
       ]);
       setGoals(await goalsRes.json() as Goal[]);
       setSkills(await skillsRes.json() as Skill[]);
+      setHighlights(await highlightsRes.json() as Highlight[]);
     } catch {
       toast.error("Failed to load knowledge data");
     } finally {
@@ -132,6 +137,7 @@ export default function KnowledgePage() {
             <TabsList>
               <TabsTrigger value="goals">Learning Goals ({goals.length})</TabsTrigger>
               <TabsTrigger value="knowledge">My Knowledge ({skills.length})</TabsTrigger>
+              <TabsTrigger value="highlights">Highlights ({highlights.length})</TabsTrigger>
             </TabsList>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={getRecommendations} disabled={aiLoading}>
@@ -234,6 +240,13 @@ export default function KnowledgePage() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="highlights" className="mt-4 space-y-4">
+            <div className="flex justify-end">
+              <HighlightForm onSuccess={fetchData} />
+            </div>
+            <HighlightList highlights={highlights} loading={loading} onDelete={fetchData} />
           </TabsContent>
         </Tabs>
       </div>
