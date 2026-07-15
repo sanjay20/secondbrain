@@ -55,6 +55,7 @@ model User {
   highlights          Highlight[]
   knowledgeConversations KnowledgeConversation[]
   knowledgeMessages      KnowledgeMessage[]
+  contacts               Contact[]
 
   @@map("users")
 }
@@ -680,4 +681,22 @@ model KnowledgeMessage {
 
   @@index([conversationId, createdAt])
   @@map("knowledge_messages")
+}
+
+// ─── RELATIONSHIPS / PEOPLE CRM ────────────────────────────────────────────────
+
+model Contact {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  relationshipType  String   @default("friend")
+  notes             String?
+  lastInteractionAt DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, lastInteractionAt])
+  @@map("contacts")
 }
