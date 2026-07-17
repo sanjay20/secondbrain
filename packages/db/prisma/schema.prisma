@@ -24,6 +24,7 @@ model User {
   habitLogs           HabitLog[]
   workouts            Workout[]
   sleepLogs           SleepLog[]
+  mealEntries         MealEntry[]
   goals               Goal[]
   skills              Skill[]
   journals            JournalEntry[]
@@ -128,6 +129,24 @@ model SleepLog {
 
   @@index([userId, startTime])
   @@map("sleep_logs")
+}
+
+model MealEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  mealType  String
+  calories  Int?
+  protein   Float?
+  carbs     Float?
+  fat       Float?
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@map("meal_entries")
 }
 
 // ─── CAREER MODULE ───────────────────────────────────────────────────────────
