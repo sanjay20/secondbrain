@@ -70,6 +70,48 @@ export function formatDuration(totalMinutes: number): string {
   return `${h}h ${m}m`;
 }
 
+// ─── Nutrition types ───────────────────────────────────────────────────────────
+
+export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
+export type MealType = (typeof MEAL_TYPES)[number];
+export const MEAL_NAME_MAX_LEN = 200;
+export const MEAL_CALORIES_MAX = 20000;
+export const MEAL_MACRO_MAX = 2000;
+export const MEAL_PAGE_LIMIT = 100;
+
+export interface MealEntry {
+  id: string;
+  userId: string;
+  name: string;
+  mealType: string;
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
+  date: Date | string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface MealTotals {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+export function mealTotals(meals: MealEntry[]): MealTotals {
+  return meals.reduce<MealTotals>(
+    (acc, m) => ({
+      calories: acc.calories + (m.calories ?? 0),
+      protein: acc.protein + (m.protein ?? 0),
+      carbs: acc.carbs + (m.carbs ?? 0),
+      fat: acc.fat + (m.fat ?? 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0 },
+  );
+}
+
 export type HabitFrequency = "daily" | "weekly";
 export type HabitCategory = "health" | "fitness" | "mindfulness" | "learning" | "productivity" | "social" | "general";
 
