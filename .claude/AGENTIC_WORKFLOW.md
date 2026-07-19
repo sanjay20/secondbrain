@@ -66,6 +66,8 @@ Each agent is assigned the cheapest model that can reliably handle its task. Exp
 | Test Agent | `claude-sonnet-4-6` | Test writing follows clear patterns — Sonnet is sufficient |
 | Review Agent | `claude-opus-4-8` | Multi-angle security/architecture analysis — deep reasoning required |
 | PR Agent | `claude-haiku-4-5-20251001` | Pure CLI execution (tsc, git push, gh pr create) — minimal reasoning |
+| Overlap Analyzer (batch) | `claude-opus-4-8` | Cross-ticket conflict classification + lane scheduling — one high-stakes call, bounded cost |
+| Lane Runner (batch) | `claude-opus-4-8` | Drives Dev→Test→Review→PR for one lane inside an isolated git worktree |
 
 ---
 
@@ -677,6 +679,148 @@ JIRA_PROJECT_KEY=SB
 gh repo view                        # should show sanjay20/secondbrain
 node -e "require('dotenv').config({path:'.env.local'}); console.log(process.env.JIRA_BASE_URL)"
 ```
+
+---
+
+## Parallel Batch Mode — `/run-workflow-parallel`
+
+Runs **multiple Jira tickets** through the pipeline at once, parallelizing only the tickets whose changes don't collide. A new **Overlap Analyzer** partitions the batch into **lanes**: independent lanes run concurrently (each in its own git worktree), while tickets that touch the same code are **serialized and stacked** inside one lane so no two open PRs ever conflict on `master`.
+
+**When to use which:**
+- `/run-workflow SB-42` — a single ticket (the sequential flow above).
+- `/run-workflow-parallel SB-30 SB-31 SB-32` — two or more existing tickets together.
+
+### Pipeline shape
+
+```
+Phase -1  Board discovery (list mode)  (node .claude/scripts/jira-board.mjs → all issues + descriptions)
+   ⛔     User picks the ticket list from the board
+Phase 0a  PM per ticket                (parallel, read-only, shared tree)
+   ⛔     Batched PRD gate
+Phase 0b  Planner per ticket           (parallel, read-only, shared tree)
+Phase 1   Overlap Analyzer             (1 Opus call → lanes.json + overlap.md)
+   ⛔     Batched Plan gate  (+ lane plan shown)
+Phase 2   Lane Runners                 (parallel, one isolated worktree each)
+          → consolidated batch-report.md (all PR URLs + merge order)
+```
+
+**Phase -1 — Board discovery** (optional entry point). Run `/run-workflow-parallel` with **no keys**
+(or `list` / `board`) to fetch every issue in the Jira project via
+`.claude/scripts/jira-board.mjs` and print them grouped: Epics, runnable To-Do stories **with
+descriptions** (grouped by epic), and a compact index of the rest. Raw rows cache to
+`.claude/workflow/_board/issues.json`. The user replies with the keys to run (2+ Story keys — Epics
+are containers, not runnable), and the batch proceeds from Phase 0a. If keys are supplied up front,
+this phase is skipped.
+
+Only **two** human gates for the whole batch (not 2×N): approve all PRDs, then approve all plans + the lane schedule. Everything after the plan gate runs unattended.
+
+### Lane model — how overlap becomes a schedule
+
+The Overlap Analyzer intersects each ticket's **`Affected files`** table from its `plan.md` and classifies every pair:
+
+- **HARD conflict** — both modify the *same existing file* (especially the same function/section) → the tickets MUST share a lane and run serialized + stacked.
+- **SOFT conflict** — both touch a shared file but only by *appending independent entries* to a registry that merges cleanly (a new model in `schema.prisma`, a new key in the `FEATURES` map in `ai-config.ts`, a new route in its own path) → parallel-safe, flagged for a trivial rebase. When unsure whether a shared file is append-safe, treat it as HARD.
+- **NONE** — disjoint file sets → fully independent lanes.
+
+Connected components of the HARD-conflict graph become lanes; isolated tickets are single-ticket lanes (maximum parallelism). Within a multi-ticket lane the tickets run in a **merge order**: the first branches off `master`, each subsequent ticket branches off the previous ticket's branch (stacked PRs).
+
+### Namespaced artifacts
+
+```
+.claude/workflow/<batch-id>/
+├── batch.json          ← ticket list + phase status (orchestrator-owned)
+├── overlap.md          ← human-readable conflict matrix + lane assignment
+├── lanes.json          ← machine schedule the orchestrator consumes
+├── batch-report.md     ← final: every branch, PR URL, base, merge order
+├── SB-30/  handoff.json prd.md plan.md dev-notes.md test-report.md review.md
+├── SB-31/  …
+└── SB-32/  …
+```
+
+Every stage writes to its **ticket subdir**, never the shared root — so parallel lanes never clobber each other's `handoff.json`.
+
+### Failure isolation
+
+A `failed` or `needs_human` in one lane pauses/aborts **only that lane**; sibling lanes keep running. The batch report lists succeeded PRs and failed lanes separately.
+
+---
+
+### Agent 0 — Overlap Analyzer (`overlap`)
+
+**Model:** `claude-opus-4-8`
+**Role:** Release coordinator. Reads every ticket's plan, classifies pairwise conflicts, and partitions the batch into parallel lanes with a merge order. Runs **once per batch** — cost is bounded regardless of batch size.
+
+**Input:** all `.claude/workflow/<batch-id>/<ticket>/plan.md` files (their `Affected files` tables) + the ticket keys.
+
+**Output:**
+- `.claude/workflow/<batch-id>/overlap.md` — conflict matrix, lane assignment, one-line rationale per conflict.
+- `.claude/workflow/<batch-id>/lanes.json` — the schedule.
+
+**`lanes.json` schema:**
+```json
+{
+  "batch_id": "20260712-1530",
+  "lanes": [
+    { "lane": "A", "tickets": ["SB-31"] },
+    { "lane": "B", "tickets": ["SB-30", "SB-32"], "chained": true }
+  ],
+  "merge_order": ["SB-31", "SB-30", "SB-32"],
+  "conflicts": [
+    { "type": "hard", "tickets": ["SB-30","SB-32"], "files": ["packages/ai-core/src/provider.ts"] },
+    { "type": "soft", "tickets": ["SB-30","SB-31"], "files": ["packages/db/schema.prisma"],
+      "note": "each appends a new model; rebase is trivial" }
+  ]
+}
+```
+For a `chained` lane, `tickets` is already in merge order (first branches off `master`, each next off the previous branch).
+
+**Prompt to spawn this agent:**
+```
+You are the Overlap Analyzer for the SecondBrain project.
+Model: claude-opus-4-8
+You are given a batch of Jira tickets that have each already been planned.
+Read every .claude/workflow/<batch-id>/<ticket>/plan.md and extract its "Affected files" table.
+
+For each PAIR of tickets, classify the relationship:
+  HARD : they modify the SAME existing file (especially the same function/section).
+  SOFT : they touch the same file only by APPENDING independent entries to a registry that
+         merges cleanly (new model in schema.prisma, new key in the FEATURES map, a new route
+         in its own path). If unsure whether a shared file is append-safe, treat it as HARD.
+  NONE : disjoint file sets.
+
+Build the HARD-conflict graph and compute its connected components. Each component is a LANE.
+Tickets with no hard conflicts are single-ticket lanes. Within a multi-ticket lane, order the
+tickets into a merge order (dependencies first, then priority) — the pipeline stacks their
+branches in that order.
+
+Write:
+  1. .claude/workflow/<batch-id>/overlap.md — conflict matrix + lane assignment + a one-line
+     rationale per conflict (which files, hard vs soft).
+  2. .claude/workflow/<batch-id>/lanes.json — using the schema in AGENTIC_WORKFLOW.md.
+  3. .claude/workflow/<batch-id>/handoff.json:
+     { "agent": "overlap", "status": "done", "run_id": "<batch-id>", "ticket": null,
+       "branch": null, "next_agent": "lanes",
+       "summary": "<P> lanes (<X> parallel, <Y> chained). Merge order: ..." }
+Do NOT write code or touch git.
+```
+
+---
+
+### Lane Runner (`lane`)
+
+**Model:** `claude-opus-4-8`, spawned with **`isolation: "worktree"`** and **`run_in_background: true`** so lanes execute concurrently without sharing a working tree.
+**Role:** Drives the build → test → review → PR stages for one lane inside an isolated worktree.
+
+**Input:** its lane object from `lanes.json` (one or more tickets in merge order) + each ticket's `plan.md`.
+
+**What it does — for each ticket in its lane, in merge order:**
+1. **Branch:** the first ticket off `master`; each subsequent ticket off the previous ticket's branch (stacked).
+2. Carry out **Agents 3 → 4 → 5 → 6** (Dev, Test, Review, PR) exactly as defined above, for this ticket, writing each stage's output to `.claude/workflow/<batch-id>/<ticket>/`. Open the PR with `base` = the branch it was cut from — a stacked PR for chained tickets, `master` for the first.
+3. If any stage returns `failed`/`needs_human`, **stop this lane at that ticket**, record where it stopped, and return — do not abort the batch.
+
+**Returns (in its final message to the orchestrator):** per ticket — branch, PR URL (or failure reason), and base branch. The orchestrator aggregates these into `batch-report.md`.
+
+> Lane Runners preserve the existing per-stage **rules** (typecheck must pass, tests on changed code, MUST-FIX auto-resolved, never commit `.env*`). If your harness supports deep sub-agent spawning, a Lane Runner MAY spawn Agents 3–6 as sub-agents to keep the per-stage model tiering (Sonnet tests, Haiku PR); otherwise it performs the four stages itself at `claude-opus-4-8`.
 
 ---
 
