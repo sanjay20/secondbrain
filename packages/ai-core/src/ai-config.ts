@@ -28,7 +28,8 @@ export type AIFeature =
   | "weeklyReview"
   | "goalConflict"
   | "streakNudge"
-  | "monthlyLifeScore";
+  | "monthlyLifeScore"
+  | "careerGapAnalysis";
 
 /**
  * Per-feature settings. Each feature lists the model to use for every provider
@@ -64,6 +65,7 @@ const FEATURES: Record<
   goalConflict:   { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
   streakNudge:    { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 400 },
   monthlyLifeScore: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1200 },
+  careerGapAnalysis: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 900 },
 };
 
 /** Resolve the provider + model + token budget for a feature. */
