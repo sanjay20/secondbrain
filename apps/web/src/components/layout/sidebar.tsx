@@ -17,6 +17,7 @@ import {
   ListTodo,
   Compass,
   MessagesSquare,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav";
@@ -93,6 +94,12 @@ const navItems = [
     href: "/knowledge-qa",
     icon: MessagesSquare,
     color: "text-pink-400",
+  },
+  {
+    label: "Relationships",
+    href: "/relationships",
+    icon: Users,
+    color: "text-teal-400",
   },
 ];
 

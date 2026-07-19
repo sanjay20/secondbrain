@@ -544,3 +544,22 @@ export interface HighlightRecap {
     createdAt: Date | string;
   }>;
 }
+
+// ─── Contact types ───────────────────────────────────────────────────────────
+
+export const CONTACT_NAME_MAX_LEN = 120;
+export const CONTACT_NOTES_MAX_LEN = 2000;
+export const CONTACT_PAGE_LIMIT = 200;
+export const RELATIONSHIP_TYPES = ["family", "friend", "colleague", "mentor", "other"] as const;
+export type RelationshipType = (typeof RELATIONSHIP_TYPES)[number];
+
+export interface Contact {
+  id: string;
+  userId: string;
+  name: string;
+  relationshipType: string;
+  notes?: string | null;
+  lastInteractionAt: Date | string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
