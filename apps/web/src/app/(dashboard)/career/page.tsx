@@ -8,6 +8,7 @@ import { GoalCard } from "@/components/career/goal-card";
 import { GoalForm } from "@/components/career/goal-form";
 import { SkillCard } from "@/components/career/skill-card";
 import { SkillForm } from "@/components/career/skill-form";
+import { GapAnalysisCard } from "@/components/career/gap-analysis-card";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -95,6 +96,8 @@ export default function CareerPage() {
             <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{aiInsight}</p>
           </div>
         )}
+
+        <GapAnalysisCard activeGoalsCount={activeGoals.length} />
 
         <Tabs defaultValue="goals">
           <div className="flex items-center justify-between">
