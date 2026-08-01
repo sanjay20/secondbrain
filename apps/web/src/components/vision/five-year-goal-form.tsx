@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getPillarMeta } from "@/lib/pillars";
+import { getPillarMeta, VISIBLE_PILLARS } from "@/lib/pillars";
 import type { FiveYearGoal } from "@secondbrain/types";
 
 const schema = z.object({
@@ -118,7 +118,7 @@ export function FiveYearGoalForm({ onSuccess, goal, trigger }: FiveYearGoalFormP
                 <SelectValue placeholder="Select pillar" />
               </SelectTrigger>
               <SelectContent>
-                {PILLARS.map((p) => {
+                {VISIBLE_PILLARS.map((p) => {
                   const meta = getPillarMeta(p);
                   return (
                     <SelectItem key={p} value={p}>

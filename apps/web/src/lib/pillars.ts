@@ -1,4 +1,5 @@
-import type { Pillar } from "@secondbrain/types";
+import { PILLARS, NOTE_PILLARS } from "@secondbrain/types";
+import type { Pillar, NotePillar } from "@secondbrain/types";
 
 export interface PillarMeta {
   label: string;
@@ -54,3 +55,22 @@ export function getPillarMeta(pillar: string): PillarMeta {
     bgColor: "bg-muted/10",
   };
 }
+
+// Pillars that still exist end-to-end in the backend (schema, API routes, AI
+// agents) but are deliberately not surfaced anywhere in the UI. Wealth is
+// dormant — the /wealth route redirects to the dashboard and the module is kept
+// warm for a future release. Dropping an entry here re-exposes it everywhere.
+export const HIDDEN_PILLARS: readonly string[] = ["wealth"];
+
+export function isHiddenPillar(pillar: string): boolean {
+  return HIDDEN_PILLARS.includes(pillar);
+}
+
+// Use these — never the raw PILLARS / NOTE_PILLARS — to build any user-facing
+// pillar list (selects, filters, charts). The raw lists stay as the backend
+// contract so dormant pillars keep validating and rendering.
+export const VISIBLE_PILLARS: readonly Pillar[] = PILLARS.filter((p) => !isHiddenPillar(p));
+
+export const VISIBLE_NOTE_PILLARS: readonly NotePillar[] = NOTE_PILLARS.filter(
+  (p) => !isHiddenPillar(p)
+);

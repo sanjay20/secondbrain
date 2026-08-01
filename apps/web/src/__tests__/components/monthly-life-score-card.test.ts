@@ -8,14 +8,15 @@
  * used by weekly-review-card.test.ts.
  *
  * Covers:
- *   - buildRadarData maps 6 pillars to chart shape with correct PILLAR_META labels
+ *   - buildRadarData maps the visible pillars to chart shape with correct
+ *     PILLAR_META labels, dropping UI-hidden pillars (Wealth)
  *   - trendMeta helper returns correct variant for up/down/flat/none
  *   - trendLabel renders the delta text or "No previous data"
  *   - Empty-state predicate: true when initialScore is null
  *   - MonthlyScorePayload type contract
  */
 import { describe, it, expect } from "vitest";
-import { PILLAR_META } from "@/lib/pillars";
+import { PILLAR_META, isHiddenPillar } from "@/lib/pillars";
 import type { Pillar } from "@secondbrain/types";
 
 // ── Types mirroring the card ──────────────────────────────────────────────────
@@ -44,11 +45,16 @@ interface MonthlyScorePayload {
 
 // ── Pure functions replicated from the card ───────────────────────────────────
 
+/** Mirrors visibleScores exported from monthly-life-score-card.tsx */
+function visibleScores(scores: PillarScore[]): PillarScore[] {
+  return scores.filter((s) => !isHiddenPillar(s.pillar));
+}
+
 /** Mirrors buildRadarData exported from monthly-life-score-card.tsx */
 function buildRadarData(
   scores: PillarScore[]
 ): Array<{ pillar: string; score: number }> {
-  return scores.map((s) => ({
+  return visibleScores(scores).map((s) => ({
     pillar: PILLAR_META[s.pillar as Pillar]?.label ?? s.pillar,
     score: s.score,
   }));
@@ -117,9 +123,9 @@ const samplePayload: MonthlyScorePayload = {
 // ── buildRadarData tests ───────────────────────────────────────────────────────
 
 describe("buildRadarData — maps pillar scores to recharts radar shape", () => {
-  it("returns an array of the same length as input scores", () => {
+  it("returns one entry per visible pillar, excluding UI-hidden ones", () => {
     const data = buildRadarData(sampleScores);
-    expect(data).toHaveLength(6);
+    expect(data).toHaveLength(sampleScores.filter((s) => !isHiddenPillar(s.pillar)).length);
   });
 
   it("each element has a 'pillar' string and a 'score' number", () => {
@@ -137,10 +143,9 @@ describe("buildRadarData — maps pillar scores to recharts radar shape", () => 
     expect(career?.pillar).toBe("Career");
   });
 
-  it("maps 'wealth' to PILLAR_META label 'Wealth'", () => {
+  it("drops 'wealth' — the pillar is scored server-side but hidden in the UI", () => {
     const data = buildRadarData(sampleScores);
-    const wealth = data.find((d) => d.pillar === "Wealth");
-    expect(wealth?.pillar).toBe("Wealth");
+    expect(data.find((d) => d.pillar === "Wealth")).toBeUndefined();
   });
 
   it("maps 'health' to PILLAR_META label 'Health'", () => {

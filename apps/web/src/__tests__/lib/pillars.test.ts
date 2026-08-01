@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { PILLAR_META, getPillarMeta } from "@/lib/pillars";
+import {
+  PILLAR_META,
+  getPillarMeta,
+  isHiddenPillar,
+  VISIBLE_PILLARS,
+  VISIBLE_NOTE_PILLARS,
+} from "@/lib/pillars";
+import { PILLARS, NOTE_PILLARS } from "@secondbrain/types";
 
 describe("PILLAR_META", () => {
   it("contains all six pillars", () => {
@@ -44,6 +51,37 @@ describe("PILLAR_META", () => {
 
   it("personal pillar has correct label", () => {
     expect(PILLAR_META.personal.label).toBe("Personal");
+  });
+});
+
+// Wealth is dormant: the backend (schema, API routes, agents) still knows it,
+// but no user-facing list may offer it.
+describe("UI-hidden pillars", () => {
+  it("treats wealth as hidden", () => {
+    expect(isHiddenPillar("wealth")).toBe(true);
+  });
+
+  it("treats every other pillar as visible", () => {
+    for (const pillar of PILLARS.filter((p) => p !== "wealth")) {
+      expect(isHiddenPillar(pillar)).toBe(false);
+    }
+  });
+
+  it("VISIBLE_PILLARS is PILLARS minus wealth, order preserved", () => {
+    expect(VISIBLE_PILLARS).toEqual(PILLARS.filter((p) => p !== "wealth"));
+  });
+
+  it("VISIBLE_NOTE_PILLARS is NOTE_PILLARS minus wealth, order preserved", () => {
+    expect(VISIBLE_NOTE_PILLARS).toEqual(NOTE_PILLARS.filter((p) => p !== "wealth"));
+  });
+
+  it("keeps wealth in the backend pillar contracts", () => {
+    expect(PILLARS).toContain("wealth");
+    expect(NOTE_PILLARS).toContain("wealth");
+  });
+
+  it("keeps PILLAR_META.wealth so legacy wealth-tagged records still render", () => {
+    expect(PILLAR_META.wealth.label).toBe("Wealth");
   });
 });
 
