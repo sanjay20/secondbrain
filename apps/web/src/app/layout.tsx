@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     default: "SecondBrain",
     template: "%s | SecondBrain",
   },
-  description: "Your AI-powered personal life operating system — health, career, wealth, and knowledge in one place.",
+  description: "Your AI-powered personal life operating system — health, career, and knowledge in one place.",
   keywords: ["habits", "goals", "career", "productivity", "AI", "personal development"],
 };
 

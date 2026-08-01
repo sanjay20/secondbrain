@@ -10,8 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { NOTE_PILLARS, NOTE_CONTENT_MAX_LEN, type Note } from "@secondbrain/types";
+import { NOTE_CONTENT_MAX_LEN, type Note } from "@secondbrain/types";
+import { VISIBLE_NOTE_PILLARS } from "@/lib/pillars";
 
+// Wealth is intentionally absent from the pickers (see VISIBLE_NOTE_PILLARS) but
+// keeps its entry here so any pre-existing wealth note still renders a label.
 const PILLAR_META: Record<string, { label: string; icon: string; color: string }> = {
   health: { label: "Health", icon: "🩺", color: "text-rose-400" },
   career: { label: "Career", icon: "💼", color: "text-blue-400" },
@@ -124,7 +127,7 @@ export default function NotesPage() {
             <Select value={pillar} onValueChange={setPillar}>
               <SelectTrigger className="sm:w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {NOTE_PILLARS.map((p) => (
+                {VISIBLE_NOTE_PILLARS.map((p) => (
                   <SelectItem key={p} value={p}>{pillarMeta(p).icon} {pillarMeta(p).label}</SelectItem>
                 ))}
               </SelectContent>
@@ -153,7 +156,7 @@ export default function NotesPage() {
             <SelectTrigger className="sm:w-44"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All pillars</SelectItem>
-              {NOTE_PILLARS.map((p) => (
+              {VISIBLE_NOTE_PILLARS.map((p) => (
                 <SelectItem key={p} value={p}>{pillarMeta(p).icon} {pillarMeta(p).label}</SelectItem>
               ))}
             </SelectContent>

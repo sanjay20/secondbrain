@@ -12,7 +12,7 @@ import {
 import { Activity, RefreshCw, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { PILLAR_META } from "@/lib/pillars";
+import { PILLAR_META, isHiddenPillar } from "@/lib/pillars";
 import type { Pillar } from "@secondbrain/types";
 
 type TrendDirection = "up" | "down" | "flat" | "none";
@@ -59,9 +59,15 @@ function buildMonthOptions(): Array<{ year: number; month: number; label: string
   return opts;
 }
 
+// The agent still scores every pillar server-side; pillars hidden from the UI
+// (Wealth) are dropped here so the card only ever shows what the user can see.
+export function visibleScores(scores: PillarScore[]): PillarScore[] {
+  return scores.filter((s) => !isHiddenPillar(s.pillar));
+}
+
 // Map scores into the recharts radar shape with friendly pillar labels.
 export function buildRadarData(scores: PillarScore[]): Array<{ pillar: string; score: number }> {
-  return scores.map((s) => ({
+  return visibleScores(scores).map((s) => ({
     pillar: PILLAR_META[s.pillar as Pillar]?.label ?? s.pillar,
     score: s.score,
   }));
@@ -134,6 +140,7 @@ export function MonthlyLifeScoreCard({ initialScore }: MonthlyLifeScoreCardProps
   }
 
   const trendByPillar = new Map(score?.trend.map((t) => [t.pillar, t]) ?? []);
+  const shownScores = score ? visibleScores(score.scores) : [];
   const radarData = score ? buildRadarData(score.scores) : [];
 
   return (
@@ -146,7 +153,7 @@ export function MonthlyLifeScoreCard({ initialScore }: MonthlyLifeScoreCardProps
           <div className="min-w-0">
             <h3 className="font-semibold text-sm">Monthly Life Score</h3>
             <p className="text-xs text-muted-foreground truncate">
-              Your balance across the six life pillars
+              Your balance across your life pillars
             </p>
           </div>
         </div>
@@ -172,7 +179,7 @@ export function MonthlyLifeScoreCard({ initialScore }: MonthlyLifeScoreCardProps
             {loading ? "Scoring your month…" : "Loading…"}
           </p>
         </div>
-      ) : score && score.scores.length > 0 ? (
+      ) : score && shownScores.length > 0 ? (
         <div className="space-y-5">
           <ResponsiveContainer width="100%" height={260}>
             <RadarChart data={radarData} outerRadius="75%">
@@ -202,7 +209,7 @@ export function MonthlyLifeScoreCard({ initialScore }: MonthlyLifeScoreCardProps
               </tr>
             </thead>
             <tbody className="space-y-3">
-              {score.scores.map((s) => {
+              {shownScores.map((s) => {
                 const meta = PILLAR_META[s.pillar as Pillar];
                 const trend = trendByPillar.get(s.pillar);
                 const { Icon, className } = trendMeta(trend?.direction ?? "none");
@@ -242,7 +249,7 @@ export function MonthlyLifeScoreCard({ initialScore }: MonthlyLifeScoreCardProps
         <div className="flex flex-col items-center justify-center py-10 gap-3">
           <Activity className="w-8 h-8 text-indigo-400/50" />
           <p className="text-sm text-muted-foreground text-center">
-            Generate an AI score across your six life pillars for{" "}
+            Generate an AI score across your life pillars for{" "}
             {MONTH_NAMES[selected.month - 1]} {selected.year}.
           </p>
           <Button onClick={() => generate()} disabled={loading} size="sm">
