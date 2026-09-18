@@ -57,6 +57,8 @@ model User {
   knowledgeConversations KnowledgeConversation[]
   knowledgeMessages      KnowledgeMessage[]
   contacts               Contact[]
+  savingsLeaks           SavingsLeak[]
+  savingsLeakLogs        SavingsLeakLog[]
 
   @@map("users")
 }
@@ -718,4 +720,50 @@ model Contact {
   @@index([userId])
   @@index([userId, lastInteractionAt])
   @@map("contacts")
+}
+
+// ─── LIFE SAVINGS MODULE ──────────────────────────────────────────────────────
+
+// A named way the user drains their discipline savings ("leak"). The catalog is
+// per-user and fully editable: the API seeds a default set on first read, but
+// every field — including cost — can be changed, and custom leaks can be added.
+model SavingsLeak {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  icon        String   @default("⚠️")
+  category    String   @default("other")
+  pillar      String   @default("personal")
+  cost        Int      @default(20)
+  isActive    Boolean  @default(true)
+  isSeeded    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  logs SavingsLeakLog[]
+
+  @@index([userId])
+  @@map("savings_leaks")
+}
+
+// One occurrence of a leak. `cost` is snapshotted at log time so re-pricing a
+// leak in the catalog never silently rewrites past balances.
+model SavingsLeakLog {
+  id        String      @id @default(cuid())
+  leakId    String
+  leak      SavingsLeak @relation(fields: [leakId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime    @db.Date
+  cost      Int
+  intensity Int         @default(1)
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([userId, date])
+  @@index([leakId])
+  @@map("savings_leak_logs")
 }

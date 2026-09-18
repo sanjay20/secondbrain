@@ -563,3 +563,121 @@ export interface Contact {
   createdAt: Date | string;
   updatedAt: Date | string;
 }
+
+// ─── Life Savings types ──────────────────────────────────────────────────────
+// A ledger of discipline "credits": following the plan you set for yourself
+// earns them, the ways you leak energy spend them. The balance is never stored
+// — it is recomputed from habit/task/sleep/mood data plus logged leaks, so
+// back-filling a habit retroactively corrects the balance.
+
+export const LEAK_CATEGORIES = ["energy", "emotion", "urge", "money", "plan", "other"] as const;
+export type LeakCategory = (typeof LEAK_CATEGORIES)[number];
+
+export const LEAK_NAME_MAX_LEN = 60;
+export const LEAK_DESCRIPTION_MAX_LEN = 200;
+export const LEAK_NOTE_MAX_LEN = 300;
+export const LEAK_ICON_MAX_LEN = 8;
+export const LEAK_COST_MIN = 1;
+export const LEAK_COST_MAX = 500;
+export const LEAK_INTENSITY_MIN = 1;
+export const LEAK_INTENSITY_MAX = 3;
+export const LEAK_LOG_PAGE_LIMIT = 200;
+
+/** Rolling window the balance is computed over. */
+export const SAVINGS_WINDOW_DAYS = 90;
+export const SAVINGS_MIN_WINDOW_DAYS = 7;
+export const SAVINGS_MAX_WINDOW_DAYS = 365;
+
+export interface SavingsLeak {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string | null;
+  icon: string;
+  category: string;
+  pillar: string;
+  cost: number;
+  isActive: boolean;
+  isSeeded: boolean;
+  sortOrder: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface SavingsLeakLog {
+  id: string;
+  leakId: string;
+  userId: string;
+  date: Date | string;
+  cost: number;
+  intensity: number;
+  note?: string | null;
+  createdAt: Date | string;
+  leak?: Pick<SavingsLeak, "id" | "name" | "icon" | "category" | "pillar">;
+}
+
+/** How healthy the balance is — drives the red alert in the UI. */
+export const SAVINGS_ALERT_LEVELS = ["healthy", "watch", "critical"] as const;
+export type SavingsAlertLevel = (typeof SAVINGS_ALERT_LEVELS)[number];
+
+export interface SavingsAlert {
+  level: SavingsAlertLevel;
+  headline: string;
+  detail: string;
+}
+
+/** One day of the ledger. `key` is the storage day-key, `label` the display date. */
+export interface SavingsDay {
+  key: string;
+  label: string;
+  earned: number;
+  spent: number;
+  net: number;
+}
+
+export interface EarnBreakdownItem {
+  key: string;
+  label: string;
+  pillar: string;
+  credits: number;
+  count: number;
+}
+
+export interface LeakBreakdownItem {
+  leakId: string;
+  name: string;
+  icon: string;
+  category: string;
+  pillar: string;
+  credits: number;
+  count: number;
+}
+
+export interface PillarBalance {
+  pillar: string;
+  earned: number;
+  spent: number;
+  net: number;
+}
+
+export interface SavingsBalance {
+  windowDays: number;
+  balance: number;
+  earned: number;
+  spent: number;
+  /** Share of earnings that leaked back out over the trailing 7 days, 0–100+. */
+  burnRatePct: number;
+  weekEarned: number;
+  weekSpent: number;
+  weekNet: number;
+  todayEarned: number;
+  todaySpent: number;
+  todayNet: number;
+  /** Consecutive days up to today with no leak logged. */
+  cleanDayStreak: number;
+  alert: SavingsAlert;
+  days: SavingsDay[];
+  earnBreakdown: EarnBreakdownItem[];
+  leakBreakdown: LeakBreakdownItem[];
+  pillars: PillarBalance[];
+}
