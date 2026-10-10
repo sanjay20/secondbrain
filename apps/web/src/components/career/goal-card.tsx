@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn, formatDate, progressColor } from "@/lib/utils";
+import { LinkedBooks } from "@/components/books/linked-books";
 import type { Goal } from "@secondbrain/types";
 
 const priorityConfig = {
@@ -105,6 +106,8 @@ export function GoalCard({ goal, onUpdate }: GoalCardProps) {
         </div>
         <Progress value={goal.progress} indicatorClassName={progressColor(goal.progress)} />
       </div>
+
+      <LinkedBooks links={goal.bookLinks} className="mt-3" />
 
       {!isCompleted && (
         <div className="flex items-center gap-2 mt-3">

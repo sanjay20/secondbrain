@@ -18,7 +18,10 @@ export async function GET(req: Request) {
 
   const goals = await prisma.goal.findMany({
     where: { userId: user.id, ...(area ? { area } : {}) },
-    include: { milestones: { orderBy: { order: "asc" } } },
+    include: {
+      milestones: { orderBy: { order: "asc" } },
+      bookLinks: { include: { readingItem: { select: { id: true, title: true } } } },
+    },
     orderBy: { createdAt: "desc" },
   });
 

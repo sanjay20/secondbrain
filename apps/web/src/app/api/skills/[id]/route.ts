@@ -17,6 +17,7 @@ const skillInclude = {
       goal: { select: { id: true, title: true } },
     },
   },
+  bookLinks: { include: { readingItem: { select: { id: true, title: true } } } },
 } as const;
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

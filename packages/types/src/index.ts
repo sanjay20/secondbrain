@@ -18,6 +18,8 @@ export interface Habit {
   updatedAt: Date;
   logs?: HabitLog[];
   completedToday?: boolean;
+  /** Books attached to this habit, for read-only display. See LinkedBookRef. */
+  bookLinks?: LinkedBookRef[];
 }
 
 export interface HabitLog {
@@ -132,6 +134,8 @@ export interface Goal {
   createdAt: Date;
   updatedAt: Date;
   milestones?: Milestone[];
+  /** Books attached to this goal, for read-only display. See LinkedBookRef. */
+  bookLinks?: LinkedBookRef[];
 }
 
 export interface Milestone {
@@ -191,6 +195,8 @@ export interface Skill {
   updatedAt: Date;
   skillGoals?: SkillGoal[];
   goals?: { id: string; title: string }[];
+  /** Books attached to this skill, for read-only display. See LinkedBookRef. */
+  bookLinks?: LinkedBookRef[];
 }
 
 // ─── Journal types ────────────────────────────────────────────────────────────
@@ -520,8 +526,19 @@ export interface ReadingItem {
   title: string;
   author?: string | null;
   type: string;
+  status: string;
+  category: string;
+  url?: string | null;
+  notes?: string | null;
+  totalPages?: number | null;
+  currentPage: number;
+  rating?: number | null;
+  /** Derived by the API when `status` flips to/from "finished" — never user-entered. */
+  finishedAt?: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  links?: BookLink[];
+  _count?: { highlights: number };
 }
 
 export interface Highlight {
@@ -543,6 +560,78 @@ export interface HighlightRecap {
     sourceAuthor?: string | null;
     createdAt: Date | string;
   }>;
+}
+
+// ─── Book types ──────────────────────────────────────────────────────────────
+// Books are ReadingItems with shelf metadata. The Prisma model and table keep
+// their `ReadingItem` / `reading_items` names so every existing Highlight keeps
+// its source and no data migration was needed; everything user-facing says
+// "book". Reuse READING_TYPES above for the book/article distinction.
+
+export const BOOK_STATUSES = ["want", "reading", "finished"] as const;
+export type BookStatus = (typeof BOOK_STATUSES)[number];
+
+// Same members as the existing KnowledgeCategory union, so a book lines up with
+// the learning goals and skills it backs. This is NOT a pillar — do not
+// cross-wire it with PILLARS / PILLAR_TAGS / NOTE_PILLARS.
+export const BOOK_CATEGORIES = [
+  "technical",
+  "spiritual",
+  "parenting",
+  "finance",
+  "health",
+  "personal",
+  "other",
+] as const;
+export type BookCategory = (typeof BOOK_CATEGORIES)[number];
+
+export const BOOK_LINK_TARGETS = ["goal", "habit", "skill", "task"] as const;
+export type BookLinkTarget = (typeof BOOK_LINK_TARGETS)[number];
+
+export const BOOK_TITLE_MAX_LEN = 200;
+export const BOOK_AUTHOR_MAX_LEN = 120;
+export const BOOK_NOTES_MAX_LEN = 2000;
+export const BOOK_URL_MAX_LEN = 500;
+export const BOOK_RATING_MIN = 1;
+export const BOOK_RATING_MAX = 5;
+export const BOOK_MAX_PAGES = 100_000;
+export const BOOK_LINKS_MAX = 50;
+/**
+ * List cap. Deliberately not named BOOK_PAGE_LIMIT like the repo's other
+ * *_PAGE_LIMIT consts — "page" means a physical book page in this module.
+ */
+export const BOOK_LIST_LIMIT = 200;
+
+/** A ReadingItem with shelf metadata. The UI calls these books. */
+export type Book = ReadingItem;
+
+/**
+ * A book link as hydrated on the other side of the relation — on a Goal, Skill
+ * or Habit — for read-only "backed by this book" chips.
+ */
+export interface LinkedBookRef {
+  id: string;
+  readingItem: { id: string; title: string };
+}
+
+/**
+ * Joins a book to exactly one Goal, Habit, Skill or Task. Exactly one of the
+ * four id fields is non-null; `bookLinkChips` in lib/books.ts is the single
+ * place that discriminates on which.
+ */
+export interface BookLink {
+  id: string;
+  userId: string;
+  readingItemId: string;
+  goalId?: string | null;
+  habitId?: string | null;
+  skillId?: string | null;
+  taskId?: string | null;
+  createdAt: Date | string;
+  goal?: { id: string; title: string } | null;
+  habit?: { id: string; name: string; icon: string } | null;
+  skill?: { id: string; name: string } | null;
+  task?: { id: string; title: string; status: string } | null;
 }
 
 // ─── Contact types ───────────────────────────────────────────────────────────

@@ -21,6 +21,7 @@ export async function GET() {
     where: { userId: user.id, isActive: true },
     include: {
       logs: { where: { date: today } },
+      bookLinks: { include: { readingItem: { select: { id: true, title: true } } } },
     },
     orderBy: { createdAt: "asc" },
   });
