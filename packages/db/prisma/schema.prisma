@@ -33,6 +33,7 @@ model User {
   aiWeeklyReviews     AiWeeklyReview[]
   aiGoalConflict      AiGoalConflict?
   monthlyLifeScores   MonthlyLifeScore[]
+  aiCareerGapAnalyses AiCareerGapAnalysis[]
   wealthAccounts      WealthAccount[]
   transactions        Transaction[]
   investments         Investment[]
@@ -592,6 +593,23 @@ model MonthlyLifeScore {
   @@unique([userId, year, month])
   @@index([userId])
   @@map("monthly_life_scores")
+}
+
+// AI Career Gap Analysis (SB-16): one cached row per user per calendar month.
+// content holds a CareerGapOutput { gaps, suggestedSkill, summary }.
+model AiCareerGapAnalysis {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year      Int
+  month     Int // 1–12
+  content   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, year, month])
+  @@index([userId])
+  @@map("ai_career_gap_analyses")
 }
 
 // ─── AI COACH CHAT ───────────────────────────────────────────────────────────
