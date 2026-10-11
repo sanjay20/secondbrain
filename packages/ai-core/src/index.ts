@@ -23,5 +23,13 @@ export { generateStreakNudge } from "./agents/nudge-agent";
 export type { NudgeContext, NudgeOutput, NudgeHabit } from "./agents/nudge-agent";
 export { generateMonthlyLifeScore, LIFE_PILLARS } from "./agents/monthly-life-score-agent";
 export type { MonthlyLifeScoreContext, MonthlyLifeScoreOutput, PillarScore, LifePillar } from "./agents/monthly-life-score-agent";
+export { generateSavingsPerspective } from "./agents/savings-agent";
+export type {
+  SavingsPerspectiveContext,
+  SavingsPerspectiveOutput,
+  SavingsLeakSummary,
+  SavingsEarnSummary,
+  SavingsPillarSummary,
+} from "./agents/savings-agent";
 export { generateCareerGapAnalysis } from "./agents/career-gap-agent";
 export type { CareerGapContext, CareerGapOutput, CareerGap, SuggestedSkill } from "./agents/career-gap-agent";

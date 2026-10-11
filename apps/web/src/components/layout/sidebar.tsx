@@ -18,6 +18,7 @@ import {
   Compass,
   MessagesSquare,
   Users,
+  PiggyBank,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav";
@@ -76,6 +77,12 @@ const navItems = [
     href: "/vision",
     icon: Compass,
     color: "text-fuchsia-400",
+  },
+  {
+    label: "Life Savings",
+    href: "/savings",
+    icon: PiggyBank,
+    color: "text-lime-400",
   },
   {
     label: "Mindset",

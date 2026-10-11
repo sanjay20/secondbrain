@@ -29,6 +29,7 @@ export type AIFeature =
   | "goalConflict"
   | "streakNudge"
   | "monthlyLifeScore"
+  | "savingsInsight"
   | "careerGapAnalysis";
 
 /**
@@ -65,6 +66,7 @@ const FEATURES: Record<
   goalConflict:   { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 800 },
   streakNudge:    { anthropic: MODELS.fast, gemini: GEMINI_MODELS.fast, groq: GROQ_MODELS.fast, maxTokens: 400 },
   monthlyLifeScore: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 1200 },
+  savingsInsight:   { anthropic: MODELS.smart, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 700 },
   careerGapAnalysis: { anthropic: MODELS.powerful, gemini: GEMINI_MODELS.smart, groq: GROQ_MODELS.smart, maxTokens: 900 },
 };
 

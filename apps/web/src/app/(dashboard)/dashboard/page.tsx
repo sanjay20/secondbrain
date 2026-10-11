@@ -13,10 +13,12 @@ import { GoalConflictCard } from "@/components/dashboard/goal-conflict-card";
 import { StreakNudgeCard } from "@/components/dashboard/streak-nudge-card";
 import { MonthlyLifeScoreCard } from "@/components/dashboard/monthly-life-score-card";
 import { HighlightRecapCard } from "@/components/dashboard/highlight-recap-card";
+import { SavingsBalanceCard } from "@/components/dashboard/savings-balance-card";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { userDayRange } from "@/lib/datetime";
 import { readScores, isImmediatelyPrior, buildScorePayload } from "@/lib/monthly-score";
+import { loadSavingsBalance } from "@/lib/savings-data";
 
 async function getDashboardData() {
   const user = await getCurrentUser();
@@ -27,7 +29,7 @@ async function getDashboardData() {
 
   const dayRange = userDayRange(today, user.timezone ?? undefined);
 
-  const [habits, habitLogs, goals, briefing, todaysTasks, affirmationCount, weeklyReview, recentMonthlyScores] = await Promise.all([
+  const [habits, habitLogs, goals, briefing, todaysTasks, affirmationCount, weeklyReview, recentMonthlyScores, savingsBalance] = await Promise.all([
     prisma.habit.findMany({ where: { userId: user.id, isActive: true } }),
     prisma.habitLog.findMany({
       where: { userId: user.id, date: today, completed: true },
@@ -59,6 +61,12 @@ async function getDashboardData() {
       where: { userId: user.id },
       orderBy: [{ year: "desc" }, { month: "desc" }],
       take: 2,
+    }),
+    // Life Savings is computed, not stored — a failure here must not take the
+    // whole dashboard down with it.
+    loadSavingsBalance(prisma, user.id).catch((err) => {
+      console.error("[DASHBOARD] savings balance failed:", err);
+      return null;
     }),
   ]);
 
@@ -115,6 +123,7 @@ async function getDashboardData() {
     weeklyReview: (weeklyReview?.content as WeeklyReviewOutput | undefined) ?? null,
     weeklyReviewLabel,
     initialMonthlyScore,
+    savingsBalance,
   };
 }
 
@@ -133,7 +142,7 @@ export default async function DashboardPage() {
     redirect("/sign-in");
   }
 
-  const { user, habits, completedTodayCount, longestStreak, activeGoalsCount, completedGoalsCount, avgProgress, briefing, todaysTasks, isMonday: showWeeklyReviewPrompt, dailyAffirmation, weeklyReview, weeklyReviewLabel, initialMonthlyScore } = data;
+  const { user, habits, completedTodayCount, longestStreak, activeGoalsCount, completedGoalsCount, avgProgress, briefing, todaysTasks, isMonday: showWeeklyReviewPrompt, dailyAffirmation, weeklyReview, weeklyReviewLabel, initialMonthlyScore, savingsBalance } = data;
 
   return (
     <div className="flex flex-col flex-1">
@@ -185,6 +194,8 @@ export default async function DashboardPage() {
           </div>
 
           <div className="space-y-4">
+            <SavingsBalanceCard data={savingsBalance} />
+
             {/* Today's Tasks from Daily Work */}
             <div className="glass rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
