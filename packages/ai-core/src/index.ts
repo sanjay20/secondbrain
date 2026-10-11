@@ -31,3 +31,5 @@ export type {
   SavingsEarnSummary,
   SavingsPillarSummary,
 } from "./agents/savings-agent";
+export { generateCareerGapAnalysis } from "./agents/career-gap-agent";
+export type { CareerGapContext, CareerGapOutput, CareerGap, SuggestedSkill } from "./agents/career-gap-agent";

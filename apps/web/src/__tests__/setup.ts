@@ -168,6 +168,10 @@ vi.mock("@/lib/db", () => ({
       findUnique: vi.fn(),
       upsert: vi.fn(),
     },
+    aiCareerGapAnalysis: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    },
     monthlyLifeScore: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
