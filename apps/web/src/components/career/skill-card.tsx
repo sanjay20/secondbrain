@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { SKILL_CATEGORIES, SKILL_LEVELS } from "@secondbrain/types";
+import { LinkedBooks } from "@/components/books/linked-books";
 import { ProficiencyRing } from "./proficiency-ring";
 import type { Skill } from "@secondbrain/types";
 
@@ -141,6 +142,8 @@ export function SkillCard({ skill, goals, onUpdate }: SkillCardProps) {
               ))}
             </div>
           )}
+
+          {!editing && <LinkedBooks links={skill.bookLinks} className="mt-1.5" />}
         </div>
       </div>
 

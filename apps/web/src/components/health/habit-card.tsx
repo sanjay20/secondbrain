@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn, streakColor } from "@/lib/utils";
+import { LinkedBooks } from "@/components/books/linked-books";
 import type { Habit } from "@secondbrain/types";
 
 interface HabitCardProps {
@@ -77,6 +78,7 @@ export function HabitCard({ habit, onUpdate }: HabitCardProps) {
         {habit.description && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">{habit.description}</p>
         )}
+        <LinkedBooks links={habit.bookLinks} className="mt-1" />
       </div>
 
       <div className="flex items-center gap-1 shrink-0">

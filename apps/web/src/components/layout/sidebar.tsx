@@ -15,6 +15,7 @@ import {
   Settings,
   ChevronRight,
   ListTodo,
+  Library,
   Compass,
   MessagesSquare,
   Users,
@@ -53,6 +54,12 @@ const navItems = [
     href: "/knowledge",
     icon: BookOpen,
     color: "text-pink-400",
+  },
+  {
+    label: "Books",
+    href: "/books",
+    icon: Library,
+    color: "text-indigo-400",
   },
   {
     label: "Notes",

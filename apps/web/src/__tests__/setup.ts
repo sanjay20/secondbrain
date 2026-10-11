@@ -115,6 +115,13 @@ vi.mock("@/lib/db", () => ({
       deleteMany: vi.fn(),
       delete: vi.fn(),
     },
+    bookLink: {
+      findMany: vi.fn(),
+      create: vi.fn(),
+      createMany: vi.fn(),
+      deleteMany: vi.fn(),
+      delete: vi.fn(),
+    },
     calendarConnection: { findUnique: vi.fn() },
     visionArea: {
       findMany: vi.fn(),

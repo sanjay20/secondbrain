@@ -18,6 +18,7 @@ const skillInclude = {
       goal: { select: { id: true, title: true } },
     },
   },
+  bookLinks: { include: { readingItem: { select: { id: true, title: true } } } },
 } as const;
 
 export async function GET(req: Request) {

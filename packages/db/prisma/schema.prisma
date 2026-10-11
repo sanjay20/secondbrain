@@ -60,6 +60,7 @@ model User {
   contacts               Contact[]
   savingsLeaks           SavingsLeak[]
   savingsLeakLogs        SavingsLeakLog[]
+  bookLinks              BookLink[]
 
   @@map("users")
 }
@@ -84,7 +85,8 @@ model Habit {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  logs HabitLog[]
+  logs      HabitLog[]
+  bookLinks BookLink[]
 
   @@index([userId])
   @@map("habits")
@@ -173,6 +175,7 @@ model Goal {
 
   milestones Milestone[]
   skillGoals SkillGoal[]
+  bookLinks  BookLink[]
 
   @@index([userId])
   @@map("goals")
@@ -205,6 +208,7 @@ model Skill {
   updatedAt   DateTime @updatedAt
 
   skillGoals SkillGoal[]
+  bookLinks  BookLink[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -358,6 +362,7 @@ model Task {
   updatedAt     DateTime  @updatedAt
 
   timeBlocks TimeBlock[]
+  bookLinks  BookLink[]
 
   @@index([userId, scheduledDate])
   @@map("tasks")
@@ -660,20 +665,33 @@ model Note {
   @@map("notes")
 }
 
+/// The books / reading library. Surfaced in the UI as "Books"; the model keeps
+/// its original name so Highlight.readingItemId and the existing highlights and
+/// knowledge-qa code paths continue to work against the same rows.
 model ReadingItem {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  author    String?
-  type      String   @default("book")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  author      String?
+  type        String    @default("book")
+  status      String    @default("want") // want | reading | finished
+  category    String    @default("other")
+  url         String?
+  notes       String?
+  totalPages  Int?
+  currentPage Int       @default(0)
+  rating      Int? // 1-5, set once finished
+  finishedAt  DateTime? // maintained by the API when status flips, never entered by hand
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   highlights Highlight[]
+  links      BookLink[]
 
   @@unique([userId, title])
   @@index([userId])
+  @@index([userId, status])
   @@map("reading_items")
 }
 
@@ -784,4 +802,50 @@ model SavingsLeakLog {
   @@index([userId, date])
   @@index([leakId])
   @@map("savings_leak_logs")
+}
+
+// ─── BOOK LINKS MODULE ─────────────────────────────────────────────────────────
+
+// Joins a book (ReadingItem) to one Goal, Habit, Skill or Task, so a book can
+// back a career/learning goal, a habit, a skill, or spawn a dated task.
+//
+// Exactly one target FK is set per row. That invariant is enforced by the API
+// rather than the database: this repo syncs with `prisma db push` and has no
+// migrations directory, so a hand-written CHECK constraint would be dropped on
+// the next rebuild. Both writers are narrow by construction — the links block
+// in PATCH /api/books/[id] writes one FK column per deleteMany+createMany pair,
+// and POST /api/books/[id]/task writes taskId only.
+//
+// Note the deliberate naming asymmetry: `ReadingItem.links` reads well as
+// `book.links`, while the four target models expose `bookLinks`.
+model BookLink {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readingItemId String
+  readingItem   ReadingItem @relation(fields: [readingItemId], references: [id], onDelete: Cascade)
+  goalId        String?
+  goal          Goal?       @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  habitId       String?
+  habit         Habit?      @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  skillId       String?
+  skill         Skill?      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  taskId        String?
+  task          Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  // Postgres treats NULLs as distinct in a unique index, so each of these
+  // constrains only the rows that actually use that target — many habit links
+  // on one book all carry goalId = NULL without colliding.
+  @@unique([readingItemId, goalId])
+  @@unique([readingItemId, habitId])
+  @@unique([readingItemId, skillId])
+  @@unique([readingItemId, taskId])
+  // No @@index([readingItemId]) — all four uniques lead with that column.
+  @@index([userId])
+  @@index([goalId])
+  @@index([habitId])
+  @@index([skillId])
+  @@index([taskId])
+  @@map("book_links")
 }

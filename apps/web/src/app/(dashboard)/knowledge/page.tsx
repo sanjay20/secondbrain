@@ -9,6 +9,7 @@ import { GoalForm } from "@/components/career/goal-form";
 import { SkillBadge } from "@/components/career/skill-badge";
 import { HighlightForm } from "@/components/knowledge/highlight-form";
 import { HighlightList } from "@/components/knowledge/highlight-list";
+import { BooksPanel } from "@/components/books/books-panel";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +138,9 @@ export default function KnowledgePage() {
             <TabsList>
               <TabsTrigger value="goals">Learning Goals ({goals.length})</TabsTrigger>
               <TabsTrigger value="knowledge">My Knowledge ({skills.length})</TabsTrigger>
+              {/* No count: BooksPanel fetches its own list, and showing one
+                  here would mean fetching /api/books twice just for a number. */}
+              <TabsTrigger value="books">Books</TabsTrigger>
               <TabsTrigger value="highlights">Highlights ({highlights.length})</TabsTrigger>
             </TabsList>
             <div className="flex items-center gap-2">
@@ -240,6 +244,10 @@ export default function KnowledgePage() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="books" className="mt-4">
+            <BooksPanel embedded />
           </TabsContent>
 
           <TabsContent value="highlights" className="mt-4 space-y-4">
