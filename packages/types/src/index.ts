@@ -18,6 +18,8 @@ export interface Habit {
   updatedAt: Date;
   logs?: HabitLog[];
   completedToday?: boolean;
+  /** Times logged today, for habits whose targetCount is above 1. */
+  countToday?: number;
   /** Books attached to this habit, for read-only display. See LinkedBookRef. */
   bookLinks?: LinkedBookRef[];
 }
@@ -28,6 +30,8 @@ export interface HabitLog {
   userId: string;
   date: Date;
   completed: boolean;
+  /** Times the habit was logged on this date, compared against Habit.targetCount. */
+  count: number;
   note?: string | null;
   createdAt: Date;
 }
