@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { HABIT_TARGET_MAX } from "@/lib/habit-progress";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required").max(60),
@@ -20,6 +21,8 @@ const schema = z.object({
   color: z.string().default("#6366f1"),
   category: z.string().default("general"),
   frequency: z.string().default("daily"),
+  // coerce: number inputs hand back a string, and the API expects a real number.
+  targetCount: z.coerce.number().int().min(1, "At least 1").max(HABIT_TARGET_MAX).default(1),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -41,7 +44,10 @@ export function HabitForm({ onSuccess }: HabitFormProps) {
     setValue,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { icon: "✅", color: "#6366f1", category: "general", frequency: "daily" } });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { icon: "✅", color: "#6366f1", category: "general", frequency: "daily", targetCount: 1 },
+  });
 
   async function onSubmit(data: FormValues) {
     const res = await fetch("/api/habits", {
@@ -128,6 +134,24 @@ export function HabitForm({ onSuccess }: HabitFormProps) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="targetCount">Times per day</Label>
+            <Input
+              id="targetCount"
+              type="number"
+              min={1}
+              max={HABIT_TARGET_MAX}
+              {...register("targetCount")}
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave at 1 for a simple tick. Set higher to log it several times a day — like
+              drinking water 3 times.
+            </p>
+            {errors.targetCount && (
+              <p className="text-xs text-destructive">{errors.targetCount.message}</p>
+            )}
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>

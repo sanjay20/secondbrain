@@ -100,6 +100,9 @@ model HabitLog {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date      DateTime @db.Date
   completed Boolean  @default(true)
+  /// How many times the habit was logged on this date. Compared against
+  /// Habit.targetCount to decide whether `completed` is true.
+  count     Int      @default(1)
   note      String?
   createdAt DateTime @default(now())
 
